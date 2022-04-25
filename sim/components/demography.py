@@ -1,0 +1,44 @@
+import numpy as np
+from sim.components.base import Process
+
+__author__ = 'Chu-Chang Ku'
+__all__ = ['Demography']
+
+
+class Demography(Process):
+    def __call__(self, t, y, pars, calc):
+        I = self.Keys
+
+        dr = np.ones_like(y) * pars['r_die']
+        gr = np.zeros_like(I.N_State_Strata)
+
+        dr_tb = np.zeros_like(y)
+        dr_tb[I.Asym] = pars['r_die_uta']
+        dr_tb[I.Sym] = pars['r_die_uts']
+        dr_tb[I.ExSym] = pars['r_die_uts']
+        dr_tb[I.Tx] = pars['r_die_tx']
+
+        n = y.sum(0)
+        calc['n'] = n
+        calc['deaths'] = dr * y
+        calc['deaths_tb'] = dr_tb * y
+        calc['dr'] = dr
+        calc['dr_tb'] = dr_tb
+        calc['gr'] = gr
+        calc['births'] = gr * n + (calc['deaths'] + calc['deaths_tb']).sum(0)
+
+    def measure(self, t, y, pars, calc, mea):
+        I = self.Keys
+
+        ns = y.sum(0)
+        mor = calc['deaths'][I.PTB].sum(0)
+        mor_tb = calc['deaths_tb'][I.PTB].sum(0)
+
+        n = ns.sum()
+        mea['Pop'] = n
+        mea['MorR'] = (mor + mor_tb).sum() / n
+
+        for i, strata in enumerate(I.Tag_Strata):
+            n = max(ns[i], 1e-15)
+            mea[f'Pop_{strata}'] = n
+            mea[f'MorR_{strata}'] = (mor + mor_tb)[i] / n

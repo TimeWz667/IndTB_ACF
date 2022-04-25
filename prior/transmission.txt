@@ -1,0 +1,15 @@
+PCore transmission {
+    beta ~ unif(1, 20)
+
+    rr_inf_asym = 1
+    rr_inf_cs = 1
+
+    rr_sus_slat ~ unif(0.2, 0.8) # rr of reinfection (SLat vs U)
+    rr_sus_rec ~ unif(0.14, 0.31)  # rr of reinfection (Rec vs U)
+
+    y0_decline = 2012
+    y0_baseline = 2022
+
+    adr = 0.02
+    adr_adj = 0
+}

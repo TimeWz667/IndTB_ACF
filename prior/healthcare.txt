@@ -1,0 +1,12 @@
+PCore healthcare {
+    r_cs_s ~ unif(1, 2)
+    r_cs_c ~ unif(2, 3)
+
+    p_dx = 0.8
+    p_txi = 0.9
+
+    r_die_tx = 0.2
+    r_succ_tx = 2
+    r_ltfu_tx = 0.1
+
+}

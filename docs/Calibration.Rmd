@@ -1,0 +1,49 @@
+---
+title: "Calibration"
+author: "Chu-Chang Ku"
+date: "4/22/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(tidybayes)
+
+theme_set(theme_tidybayes() + theme_bw())
+
+```
+
+
+## Info. posterior samples
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+sims <- read_csv(here::here("out", "dy", "Runs_Post.csv"))
+  
+targets <- jsonlite::read_json(here::here("data", "targets.json")) %>% 
+  bind_rows()
+```
+
+- Sample size:  `r length(unique(sims$Key))`
+- Time range: `r range(sims$Time)``
+
+## 
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+sims %>% 
+  mutate(Year = Time + 0.5) %>% 
+  select(Year, Inc = IncR, Mor = MorR, Prev, Key) %>% 
+  pivot_longer(- c(Year, Key), names_to = "Index") %>% 
+  ggplot(aes(x = Year)) +
+  geom_line(aes(y = value, group = Key, colour = "Simulation"), alpha = 0.2) +
+  geom_point(data = targets, aes(y = M, colour = "Target")) + 
+  scale_y_continuous("per 100 000", labels = scales::number_format(scale = 1e5)) + 
+  scale_x_continuous("Year", breaks = c(2010, 2015, 2020), limits = c(2010, 2020)) + 
+  scale_color_discrete("") +
+  facet_grid(Index~., labeller = labeller(Index = c(Inc = "Incidence", Mor = "Mortality", Prev = "Prevalence")))
+
+
+```
+

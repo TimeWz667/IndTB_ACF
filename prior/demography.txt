@@ -1,0 +1,4 @@
+PCore Demography {
+    r_die = 1 / 70
+    N0 = 1e8
+}
