@@ -1,7 +1,6 @@
 from sims_pars.fitting.base import AbsObjectiveSimBased
 from itertools import groupby
 import pandas as pd
-from scipy.stats import norm
 import numpy as np
 import json
 import time
@@ -23,13 +22,15 @@ class Objective(AbsObjectiveSimBased):
             for k, vs in groupby(ds, key=lambda x: x['Index']):
                 self.Data[gp][k] = pd.Series({v['Year']: v['M'] for v in vs})
 
-        self.Map = [
-            ('IncR', self.Data['All']['Inc'], 1e-3),
-            ('MorR', self.Data['All']['Mor'], 1e-4),
-        ]
+        self.Map = list()
+
+        for ent in targets['All']:
+            scale = abs(ent['U'] - ent['L']) / 4
+            self.Map.append((ent['Index'], self.Data['All'][ent['Index']], scale))
 
     def simulate(self, pars):
         time.sleep(0.001)
+
         return self.Model.simulate(pars)
 
     def link_likelihood(self, sim):
@@ -53,7 +54,7 @@ if __name__ == '__main__':
 
     inputs = load_inputs('../data/pars.json')
 
-    to_fit = Objective(model=Model(inputs),
+    to_fit = Objective(model=Model(inputs, year0=1970),
                        bn=get_bn('../prior'),
                        filepath_targets='../data/targets.json')
 

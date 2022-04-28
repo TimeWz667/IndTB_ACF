@@ -27,8 +27,15 @@ def infection(sus, trans, mixing, y):
     return infection / n
 
 
+def infection_no_mixing(sus, trans, y):
+    foi = (trans * y).sum() / y.sum()
+    return (sus * y) * foi
+
+
 class Transmission(Process):
     def __call__(self, t, y, pars, calc):
+        I = self.Keys
+
         y0_decline, y0_baseline = pars['y0_decline'], pars['y0_baseline']
 
         adr = pars['adr'] + pars['adr_adj']
@@ -38,20 +45,41 @@ class Transmission(Process):
 
         adj = np.exp(-adr * (t - y0_baseline))
 
-        calc['infection'] = infection(
+        calc['infection_ds'] = infection_ds = infection_no_mixing(
             sus=pars['sus'],
-            trans=pars['trans'],
-            y=y,
-            mixing=pars['mixing']
-        ) * adj * pars['beta']
+            trans=pars['trans_ds'],
+            y=y
+        ) * adj * pars['beta_ds']
+
+        calc['infection_dr'] = infection_dr = infection_no_mixing(
+            sus=pars['sus'],
+            trans=pars['trans_dr'],
+            y=y
+        ) * adj * pars['beta_dr']
+
+        infection_ds = infection_ds.sum(0)
+        infection_dr = infection_dr.sum(0)
+
+        calc['act'] = act = np.zeros((2, I.N_State_Strata))
+        act[I.Sub_DS] = infection_ds * pars['p_primary']
+        act[I.Sub_DR] = infection_dr * pars['p_primary']
+
+        calc['lat'] = lat = np.zeros((2, I.N_State_Strata))
+        lat[I.Sub_DS] = infection_ds * (1 - pars['p_primary'])
+        lat[I.Sub_DR] = infection_dr * (1 - pars['p_primary'])
 
     def measure(self, t, y, pars, calc, mea):
         I = self.Keys
 
-        inf = calc['infection'].sum(0)
+        inf_ds = calc['infection_ds'].sum(0)
+        inf_dr = calc['infection_dr'].sum(0)
+        inf = inf_ds + inf_dr
 
         ltbi = y[I.LTBI].sum(0)
-        prev = y[[I.Asym, I.Sym, I.ExSym]].sum(0)
+        prev_a = y[I.Asym].sum(0)
+        prev_s = y[I.Sym].sum(0)
+        prev_c = y[I.ExSym].sum(0)
+        prev = prev_a + prev_s + prev_c
 
         ns = y.sum(0)
         n = ns.sum()

@@ -1,6 +1,5 @@
 from pydantic import BaseModel
 from pydantic.types import confloat
-import numpy as np
 
 __author__ = 'Chu-Chang Ku'
 __all__ = ['Intervention']
@@ -14,17 +13,15 @@ def scale_up(t, t0, t1):
     return (t - t0) / (t1 - t0)
 
 
-class ImpDx(BaseModel):
-    Dx: confloat(ge=0, le=1) = 0
-
-
-class CS(BaseModel):
+class ACF(BaseModel):
     Scale: confloat(ge=0, le=1) = 0
+    SensDx: confloat(ge=0, le=1) = 0
+    SpecDx: confloat(ge=0, le=1) = 0
+    SensScreen: confloat(ge=0, le=1) = 0
 
 
 class Intervention(BaseModel):
-    ImpDx: ImpDx = ImpDx()
-    CS: CS = CS()
+    ACF: ACF = ACF()
     T0_Intv: float = 2022
     T1_Intv: float = 2025
 
@@ -51,8 +48,7 @@ class Intervention(BaseModel):
 
 if __name__ == '__main__':
     intv_list = {
-        'ImpDx': {'Dx': 0.90},
-        'CS': {'Scale': 0.5},
+        'ACF': {'Scale': 0.5},
     }
 
     intv = Intervention.parse_obj(intv_list)

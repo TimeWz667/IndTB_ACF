@@ -1,12 +1,58 @@
 PCore healthcare {
-    r_cs_s ~ unif(1, 2)
-    r_cs_c ~ unif(2, 3)
+    // Care-seeking
+    r_cs_s ~ triangle(0.57, 0.73, 0.91)
+    r_cs_c ~ triangle(9, 12, 15)
 
-    p_dx = 0.8
-    p_txi = 0.9
+    // PCF
+    p_entry_pri ~ triangle(0.4, 0.5, 0.6)
+    p_entry_pub = 1 - p_entry_pri
 
-    r_die_tx = 0.2
-    r_succ_tx = 2
-    r_ltfu_tx = 0.1
+    p_dx_pub ~ triangle(0.81, 0.83, 0.85)
+    p_dx_pri ~ triangle(0.6, 0.7, 0.8)
+
+    p_txf_pub ~ triangle(0.85, 0.88, 0.91)
+    p_txf_pri ~ triangle(0.6, 0.7, 0.8)
+    p_txs_pub ~ triangle(0.85, 0.88, 0.91)
+    p_txs_pri = 0
+
+    p_dst_pcf ~ triangle(0.08, 0.12, 0.20)
+
+    // ACF
+    sens_acf_sp_high = 1
+    sens_acf_sn_high ~ triangle(0.6, 0.7, 0.8)
+    spec_acf_high ~ triangle(0.9, 0.99, 1)
+    p_dst_acf_high ~ triangle(0.9, 0.95, 0.97)
+
+    sens_acf_sp_mod = 1
+    sens_acf_sn_mod = 0
+    spec_acf_mod ~ triangle(0.93, 0.98, 1)
+    p_dst_acf_mod = 0
+
+    sens_acf_screen ~ triangle(0.58, 0.7, 0.82)
+    sens_acf_screen ~ triangle(0.35, 0.61, 0.87)
+
+    r_acf_screen = 365
+    r_acf_dx = 52
+
+    // Tx
+    r_succ_txf = 2
+    r_succ_txs = 0.5
+    p_succ_txf_pub ~ triangle(0.83, 0.85, 0.87)
+    p_succ_txf_pri ~ triangle(0.5, 0.6, 0.7)
+
+    r_succ_txf_pub = r_succ_txf
+    r_succ_txf_pri = r_succ_txf
+    r_ltfu_txf_pub = r_succ_txf * (1 - p_succ_txf_pub) / p_succ_txf_pub
+    r_ltfu_txf_pri = r_succ_txf * (1 - p_succ_txf_pri) / p_succ_txf_pri
+
+    p_succ_txs_pub ~ triangle(0.44, 0.46, 0.5)
+    p_succ_txs_pri = 0
+    p_tr_pub ~ triangle(0.85, 0.88, 0.92)
+    r_mdr_tx = 0.01  # DR acquired from tx
+
+    r_succ_txs_pub = r_succ_txs
+    r_succ_txs_pri = 0
+    r_ltfu_txs_pub = r_succ_txs * (1 - p_succ_txs_pub) / p_succ_txs_pub
+    r_ltfu_txs_pri = r_succ_txs
 
 }

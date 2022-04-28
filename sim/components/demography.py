@@ -10,13 +10,12 @@ class Demography(Process):
         I = self.Keys
 
         dr = np.ones_like(y) * pars['r_die']
-        gr = np.zeros_like(I.N_State_Strata)
+        gr = pars['r_growth']
 
         dr_tb = np.zeros_like(y)
-        dr_tb[I.Asym] = pars['r_die_uta']
-        dr_tb[I.Sym] = pars['r_die_uts']
-        dr_tb[I.ExSym] = pars['r_die_uts']
-        dr_tb[I.Tx] = pars['r_die_tx']
+        dr_tb[I.Asym] = pars['r_die_ut']
+        dr_tb[I.Sym] = pars['r_die_ut']
+        dr_tb[I.ExSym] = pars['r_die_ut']
 
         n = y.sum(0)
         calc['n'] = n
@@ -25,14 +24,14 @@ class Demography(Process):
         calc['dr'] = dr
         calc['dr_tb'] = dr_tb
         calc['gr'] = gr
-        calc['births'] = gr * n + (calc['deaths'] + calc['deaths_tb']).sum(0)
+        calc['births'] = gr * n.sum() + (calc['deaths'] + calc['deaths_tb']).sum()
 
     def measure(self, t, y, pars, calc, mea):
         I = self.Keys
 
         ns = y.sum(0)
-        mor = calc['deaths'][I.PTB].sum(0)
-        mor_tb = calc['deaths_tb'][I.PTB].sum(0)
+        mor = calc['deaths'][I.Infectious].sum(0)
+        mor_tb = calc['deaths_tb'][I.Infectious].sum(0)
 
         n = ns.sum()
         mea['Pop'] = n

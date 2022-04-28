@@ -1,21 +1,25 @@
 PCore progression {
-    r_die_uts ~ unif(0.07, 0.19)
-    rr_die_asym ~ unif(0, 1)
-    r_die_uta = r_die_uts * rr_die_asym
 
-    // Life history
-    r_onset = 12 / 6
+    // activation
+    p_primary ~ unif(0.05, 0.15)
+    r_react ~ unif(0.0005, 0.0015)
+    r_relapse_td ~ triangle(0.105, 0.14, 0.175)  # relapse after treatment default,
+    r_relapse_tc ~ triangle(0.024, 0.032, 0.04)  # relapse after treatment completion
+    r_relapse_st ~ triangle(0.0011, 0.002, 0.0019)  # relapse after stabilisation,
+    r_stab = 0.5  # stabilisation rate,
 
-    r_lat = 0.5
-    p_primary ~ unif(0.09, 0.14) # probability of primary
-    r_act = r_lat * p_primary / (1 - p_primary)
+    //
+    p_sp0 ~ triangle(0.5, 0.6, 0.7)
+
+    r_onset_sp ~ triangle(1.02, 1.24, 1.65)
+    r_onset_sn ~ triangle(1.9, 2.37, 3.05)
+
+    r_convert_a ~ triangle(0.62, 0.63, 0.64)
+    r_convert_s ~ triangle(0.4, 0.71, 1.04)
+
+    r_sc ~ triangle(0.125, 0.1667, 0.2083)
+    r_die_ut ~ triangle(0.15, 0.21, 0.25)
 
     r_clear ~ unif(0.02, 0.04)
-    r_sc ~ unif(0.15, 0.25)  # self-cure
 
-    r_stab = 2 / 3  # stabilisation rate,
-    r_react ~ unif(0.0005, 0.0015)  # Activation of Latent TB
-    r_relapse = 0.002  # relapse after stabilisation,
-    r_relapse_td = 0.14  # relapse after treatment default,
-    r_relapse_tc = 0.032  # relapse after treatment completion
 }

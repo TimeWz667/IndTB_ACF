@@ -1,15 +1,17 @@
 PCore transmission {
-    beta ~ unif(1, 20)
 
-    rr_inf_asym = 1
-    rr_inf_cs = 1
+    beta_ds ~ unif(0, 15)
+    rr_beta_dr ~ unif(0.95, 1.05)
+    beta_dr = beta_ds * rr_beta_dr
 
-    rr_sus_slat ~ unif(0.2, 0.8) # rr of reinfection (SLat vs U)
-    rr_sus_rec ~ unif(0.14, 0.31)  # rr of reinfection (Rec vs U)
+    rr_inf_sn ~ triangle(0.1, 0.2, 0.3)
+
+    red_sus ~ triangle(0.15, 0.21, 0.25)
+    rr_sus_ltbi ~ triangle(0.15, 0.21, 0.25)
 
     y0_decline = 2012
     y0_baseline = 2022
 
-    adr = 0.02
+    adr = 0
     adr_adj = 0
 }

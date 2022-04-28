@@ -1,4 +1,4 @@
 PCore Demography {
-    r_die = 1 / 70
-    N0 = 1e8
+    r_die = 1 / 66
+    r_growth = 0.0175
 }

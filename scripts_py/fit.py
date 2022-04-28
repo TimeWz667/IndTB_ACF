@@ -4,7 +4,7 @@ from sim.util import simulate
 
 
 inputs = load_inputs('../data/pars.json')
-m = Model(inputs, year0=2010)
+m = Model(inputs, year0=1970)
 bn = get_bn('../prior')
 to_fit = Objective(bn=bn,
                    model=m,
@@ -20,13 +20,13 @@ if __name__ == '__main__':
     from sims_pars.fitting.abcsmc import ApproxBayesComSMC
     import os
     from joblib import Parallel, delayed
-    from sim.util import save_results
+    from sim.util import bind_results
     import pandas as pd
     import pickle as pkl
 
     out_path = '../out/dy'
 
-    smc = ApproxBayesComSMC(max_round=30, n_collect=150, n_core=4, verbose=8)
+    smc = ApproxBayesComSMC(max_round=1, n_collect=100, n_core=4, verbose=8)
     smc.fit(to_fit)
 
     post = smc.Collector
@@ -49,7 +49,9 @@ if __name__ == '__main__':
     mss = [ms for _, ms, _ in rss]
     pss = [ps for _, _, ps in rss]
 
-    save_results(mss, f'{out_path}/Runs_Post.csv')
+    mss = bind_results(mss)
+    mss.to_csv(f'{out_path}/Runs_Post.csv')
+
     pd.DataFrame(pss).to_csv(f'{out_path}/Post_full.csv')
 
     res = [{'y0': list(ys.y[:, -1]), 'pars': pars} for pars, ys in zip(pss, yss)]

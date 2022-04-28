@@ -23,6 +23,7 @@ def update(model, ys0, pars, t_out, dfe=None):
     ys0 = np.array(ys0)
     ys = solve_ivp(model, [t_start, t_end], ys0, args=(pars,), events=dfe, dense_output=True)
 
+
     if len(ys.t_events[0]) > 0 or not ys.success:
         return None, None, {'succ': False, 'res': 'DFE reached'}
 

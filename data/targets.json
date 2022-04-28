@@ -1,1 +1,52 @@
-{"All":[{"Year":2019,"Index":"Inc","Tag":"All","M":0.00193},{"Year":2020,"Index":"Inc","Tag":"All","M":0.002},{"Year":2020,"Index":"Mor","Tag":"All","M":0.0003},{"Year":2020,"Index":"Prev","Tag":"All","M":0.0025}]}
+{
+  "All": [
+    {
+      "Year": 2012,
+      "Index": "Prev",
+      "Tag": "All",
+      "M": 0.00432,
+      "L": 0.00341,
+      "U": 0.00527
+    },
+    {
+      "Year": 2006,
+      "Index": "ARTI",
+      "Tag": "All",
+      "M": 0.025,
+      "L": 0.019,
+      "U": 0.031
+    },
+    {
+      "Year": 2018,
+      "Index": "PrDR_Inc",
+      "Tag": "All",
+      "M": 0.05,
+      "L": 0.04,
+      "U": 0.06
+    },
+    {
+      "Year": 2012,
+      "Index": "PrSym",
+      "Tag": "All",
+      "M": 0.70,
+      "L": 0.58,
+      "U": 0.82
+    },
+    {
+      "Year": 2012,
+      "Index": "PrSp_Sym",
+      "Tag": "All",
+      "M": 0.67,
+      "L": 0.60,
+      "U": 0.74
+    },
+    {
+      "Year": 2012,
+      "Index": "PrSp_Asym",
+      "Tag": "All",
+      "M": 0.66,
+      "L": 0.56,
+      "U": 0.77
+    }
+  ]
+}
