@@ -17,11 +17,8 @@ class Cascade(Process):
 
         r_cs_s, r_cs_c = pars['r_cs_s'], pars['r_cs_c']
 
-        if t < self.T0_Rif:
-            r_cs_s = 0
-            r_cs_c = 0
-
-        p_entry_pub, p_entry_pri = pars['p_entry_pub'], pars['p_entry_pri']
+        p_entry_pri = pars['p_entry_pri']
+        p_entry_pub = 1 - p_entry_pri
 
         if t < self.T0_DOTS:
             p_entry_pub, p_entry_pri = 0, 1
@@ -57,23 +54,49 @@ class Cascade(Process):
         calc['fn_pri_s'] = r_cs_s * p_entry_pri * (1 - p_txi) * y[I.Sym]
         calc['fn_pri_c'] = r_cs_c * p_entry_pri * (1 - p_txi) * y[I.ExSym]
 
+        # ACF
+
+        r_acf, p_dst = 0, 0
+        if t > self.Intervention.T0_Intv:
+            r_acf, p_dst = self.Intervention.modify_acf(t, r_acf, p_dst, pars)
+
+        p_dst_acf = np.array([0, 0, p_dst, p_dst]).reshape((-1, 1))
+
+        calc['acf_txf_pub_s'] = r_acf * (1 - p_dst_acf) * y[I.Sym]
+        calc['acf_txf_pub_c'] = r_acf * (1 - p_dst_acf) * y[I.ExSym]
+        calc['acf_txs_pub_s'] = r_acf * p_dst_acf * y[I.Sym]
+        calc['acf_txs_pub_c'] = r_acf * p_dst_acf * y[I.ExSym]
+
         # Tx
         r_succ_txf_pub, r_succ_txf_pri = pars['r_succ_txf_pub'], pars['r_succ_txf_pri']
         r_succ_txs_pub, r_succ_txs_pri = pars['r_succ_txs_pub'], pars['r_succ_txs_pri']
         r_ltfu_txf_pub, r_ltfu_txf_pri = pars['r_ltfu_txf_pub'], pars['r_ltfu_txf_pri']
         r_ltfu_txs_pub, r_ltfu_txs_pri = pars['r_ltfu_txs_pub'], pars['r_ltfu_txs_pri']
 
-        calc['tx_succ_txf_pub'] = r_succ_txf_pub * y[I.Txf_Pub]
-        calc['tx_succ_txf_pri'] = r_succ_txf_pri * y[I.Txf_Pri]
-        calc['tx_succ_txs_pub'] = r_succ_txs_pub * y[I.Txs_Pub]
-        calc['tx_succ_txs_pri'] = r_succ_txs_pri * y[I.Txs_Pri]
+        if t < self.T0_Rif:
+            calc['tx_succ_txf_pub'] = r_succ_txf_pub * y[I.Txf_Pub]
+            calc['tx_succ_txf_pri'] = r_succ_txf_pri * y[I.Txf_Pri]
+            calc['tx_succ_txs_pub'] = r_succ_txs_pub * y[I.Txs_Pub]
+            calc['tx_succ_txs_pri'] = r_succ_txs_pri * y[I.Txs_Pri]
 
-        calc['tx_ltfu_txf_pub'] = r_ltfu_txf_pub * (1 - pars['p_tr_pub']) * y[I.Txf_Pub]
-        calc['tx_ltfu_txf_pri'] = r_ltfu_txf_pri * y[I.Txf_Pri]
-        calc['tx_ltfu_txs_pub'] = r_ltfu_txs_pub * y[I.Txs_Pub]
-        calc['tx_ltfu_txs_pri'] = r_ltfu_txs_pri * y[I.Txs_Pri]
+            calc['tx_ltfu_txf_pub'] = r_ltfu_txf_pub * (1 - pars['p_tr_pub']) * y[I.Txf_Pub]
+            calc['tx_ltfu_txf_pri'] = r_ltfu_txf_pri * y[I.Txf_Pri]
+            calc['tx_ltfu_txs_pub'] = r_ltfu_txs_pub * y[I.Txs_Pub]
+            calc['tx_ltfu_txs_pri'] = r_ltfu_txs_pri * y[I.Txs_Pri]
 
-        calc['tx_switch_pub'] = r_ltfu_txf_pub * pars['p_tr_pub'] * y[I.Txf_Pub]
+            calc['tx_switch_pub'] = r_ltfu_txf_pub * pars['p_tr_pub'] * y[I.Txf_Pub]
+        else:
+            calc['tx_succ_txf_pub'] = 0 * y[I.Txf_Pub]
+            calc['tx_succ_txf_pri'] = 0 * y[I.Txf_Pri]
+            calc['tx_succ_txs_pub'] = 0 * y[I.Txs_Pub]
+            calc['tx_succ_txs_pri'] = 0 * y[I.Txs_Pri]
+
+            calc['tx_ltfu_txf_pub'] = (r_succ_txf_pub + r_ltfu_txf_pub) * y[I.Txf_Pub]
+            calc['tx_ltfu_txf_pri'] = (r_succ_txf_pri + r_ltfu_txf_pri) * y[I.Txf_Pri]
+            calc['tx_ltfu_txs_pub'] = (r_succ_txs_pub + r_ltfu_txs_pub) * y[I.Txs_Pub]
+            calc['tx_ltfu_txs_pri'] = (r_succ_txs_pri + r_ltfu_txs_pri) * y[I.Txs_Pri]
+
+            calc['tx_switch_pub'] = 0 * y[I.Txf_Pub]
 
     def measure(self, t, y, pars, calc, mea):
         I = self.Keys

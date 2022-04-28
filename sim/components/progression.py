@@ -19,10 +19,12 @@ class Progression(Process):
         p_sp0 = pars['p_sp0']
         sn_sp = np.array([1 - p_sp0, p_sp0, 1 - p_sp0, p_sp0]).reshape((-1, 1))
 
-        calc['react'] = r_react * y[I.SLat]
-        calc['rel_tc'] = r_rel_tc * y[I.RLow]
-        calc['rel_td'] = r_rel_td * y[I.RHigh]
-        calc['rel_st'] = r_rel_st * y[I.RSt]
+        risk_comorb = np.ones(y[I.SLat].shape)
+        risk_comorb[:, I.RiskHi] *= pars['rr_risk_comorb']
+        calc['react'] = risk_comorb * r_react * y[I.SLat]
+        calc['rel_tc'] = risk_comorb * r_rel_tc * y[I.RLow]
+        calc['rel_td'] = risk_comorb * r_rel_td * y[I.RHigh]
+        calc['rel_st'] = risk_comorb * r_rel_st * y[I.RSt]
 
         calc['act_smr'] = sn_sp * np.repeat(calc['act'], 2, axis=0)
         calc['react_smr'] = sn_sp * np.repeat(calc['react'], 2, axis=0)
@@ -72,8 +74,9 @@ class Progression(Process):
 
         mea['IncR'] = inc.sum() / n
         mea['Recent'] = calc['inc_recent'].sum() / inc.sum()
-
-        mea['PrDR_Inc'] = inc[1].sum() / inc.sum()
+        mea['IncR_DR'] = inc[1].sum() / n
+        mea['IncR_DS'] = inc[0].sum() / n
+        mea['PrDR_Inc'] = mea['IncR_DR'] / mea['IncR']
 
         prev_a = y[I.Asym].sum(0)
         prev_s = y[I.Sym].sum(0)
@@ -98,3 +101,5 @@ class Progression(Process):
 
             mea[f'Prev_{strata}'] = prev[i] / n
             mea[f'LTBI_{strata}'] = ltbi[i] / n
+
+        mea['RR_inc_comorb'] = mea['IncR_RiskHi'] / mea['IncR_RiskLo']

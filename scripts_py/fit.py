@@ -1,6 +1,5 @@
 from sim import load_inputs, Objective
 from sim.dy import Model, get_bn
-from sim.util import simulate
 
 
 inputs = load_inputs('../data/pars.json')
@@ -17,7 +16,7 @@ def fn_post(p, m):
 
 
 if __name__ == '__main__':
-    from sims_pars.fitting.abcsmc import ApproxBayesComSMC
+    from sims_pars.fitting import ApproxBayesComSMC
     import os
     from joblib import Parallel, delayed
     from sim.util import bind_results
@@ -26,7 +25,7 @@ if __name__ == '__main__':
 
     out_path = '../out/dy'
 
-    smc = ApproxBayesComSMC(max_round=1, n_collect=100, n_core=4, verbose=8)
+    smc = ApproxBayesComSMC(max_round=40, n_collect=200, n_core=4, verbose=8)
     smc.fit(to_fit)
 
     post = smc.Collector

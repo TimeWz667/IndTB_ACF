@@ -1,4 +1,7 @@
 PCore Demography {
     r_die = 1 / 66
     r_growth = 0.0175
+
+    p_comorb = 0.1
+    rr_risk_comorb = 1
 }

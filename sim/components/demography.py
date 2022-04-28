@@ -26,6 +26,13 @@ class Demography(Process):
         calc['gr'] = gr
         calc['births'] = gr * n.sum() + (calc['deaths'] + calc['deaths_tb']).sum()
 
+        r_die_crude = (calc['deaths'] + calc['deaths_tb']).sum() / n.sum()
+        if t > 1970:
+            r_comorb = (pars['p_comorb'] / (1 - pars['p_comorb'])) * (gr + r_die_crude)
+        else:
+            r_comorb = (pars['p_comorb'] / (1 - pars['p_comorb'])) * (gr + r_die_crude)
+        calc['prog_comorb'] = r_comorb * y[:, 0]
+
     def measure(self, t, y, pars, calc, mea):
         I = self.Keys
 
@@ -36,6 +43,7 @@ class Demography(Process):
         n = ns.sum()
         mea['Pop'] = n
         mea['MorR'] = (mor + mor_tb).sum() / n
+        mea['PropComorb'] = ns[1] / n
 
         for i, strata in enumerate(I.Tag_Strata):
             n = max(ns[i], 1e-15)

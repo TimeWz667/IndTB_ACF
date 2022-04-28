@@ -1,17 +1,16 @@
 PCore transmission {
+    beta_ds ~ unif(7.35, 10.7)
+    beta_dr ~ unif(4.12, 6.26)
 
-    beta_ds ~ unif(0, 15)
-    rr_beta_dr ~ unif(0.95, 1.05)
-    beta_dr = beta_ds * rr_beta_dr
+    rr_inf_sn ~ unif(0.1, 0.3)
 
-    rr_inf_sn ~ triangle(0.1, 0.2, 0.3)
-
-    red_sus ~ triangle(0.15, 0.21, 0.25)
-    rr_sus_ltbi ~ triangle(0.15, 0.21, 0.25)
+    red_sus ~ unif(0.15, 0.25)
+    rr_sus_ltbi ~ unif(0.15, 0.25)
 
     y0_decline = 2012
     y0_baseline = 2022
 
     adr = 0
     adr_adj = 0
+
 }

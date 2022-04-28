@@ -40,12 +40,27 @@ class Model:
     def update_parameters(self, pars):
         pars = dict(pars)
 
+        pars.update({
+            'r_succ_txf_pub': pars['r_succ_txf'],
+            'r_succ_txf_pri': pars['r_succ_txf'],
+            'r_ltfu_txf_pub': pars['r_succ_txf'] * (1 - pars['p_succ_txf_pub']) / pars['p_succ_txf_pub'],
+            'r_ltfu_txf_pri': pars['r_succ_txf'] * (1 - pars['p_succ_txf_pri']) / pars['p_succ_txf_pri'],
+        })
+
+        pars.update({
+            'r_succ_txs_pub': pars['r_succ_txs'],
+            'r_succ_txs_pri': 0,
+            'r_ltfu_txs_pub': pars['r_succ_txs'] * (1 - pars['p_succ_txs_pub']) / pars['p_succ_txs_pub'],
+            'r_ltfu_txs_pri': pars['r_succ_txs']
+        })
+
         pars['sus'] = sus = np.zeros((I.N_State_TB, I.N_State_Strata))
         sus[I.U] = 1
         sus[I.SLat] = pars['rr_sus_ltbi']
         sus[I.RLow] = pars['rr_sus_ltbi']
         sus[I.RHigh] = pars['rr_sus_ltbi']
         sus[I.RSt] = pars['rr_sus_ltbi']
+        # sus[: I.RiskHi] *= pars['rr_risk_comorb']
 
         pars['trans_ds'] = trans = np.zeros((I.N_State_TB, I.N_State_Strata))
         trans[I.Infectious_Sn_DS] = pars['rr_inf_sn']
@@ -138,9 +153,16 @@ class Model:
         dy[I.Sym] -= det_1_pub_s + det_2_pub_s + det_1_pri_s + fn_s
         dy[I.ExSym] += fn_s - (det_1_pub_c + det_2_pub_c + det_1_pri_c)
         dy[I.Txf_Pub] += det_1_pub_s + det_1_pub_c
-        dy[I.Txf_Pri] += det_1_pri_s + det_2_pub_c
-        dy[I.Txs_Pub] += det_2_pub_s + det_1_pri_c
+        dy[I.Txf_Pri] += det_1_pri_s + det_1_pri_c
+        dy[I.Txs_Pub] += det_2_pub_s + det_2_pub_c
         dy[I.Txs_Pri] += 0
+
+        acf_1_pub_s, acf_1_pub_c = calc['acf_txf_pub_s'], calc['acf_txf_pub_c']
+        acf_2_pub_s, acf_2_pub_c = calc['acf_txs_pub_s'], calc['acf_txs_pub_c']
+        dy[I.Sym] -= acf_1_pub_s + acf_2_pub_s
+        dy[I.ExSym] -= acf_1_pub_c + acf_2_pub_c
+        dy[I.Txf_Pub] += acf_1_pub_s + acf_1_pub_c
+        dy[I.Txs_Pub] += acf_2_pub_s + acf_2_pub_c
 
         # Tx
         tc_1_pub, td_1_pub = calc['tx_succ_txf_pub'], calc['tx_ltfu_txf_pub']
@@ -172,12 +194,17 @@ class Model:
         dy[I.U, 0] += calc['births']
         dy -= calc['deaths'] + calc['deaths_tb']
 
+        dy[:, 0] -= calc['prog_comorb']
+        dy[:, 1] += calc['prog_comorb']
+
+        # if t <= self.Year0:
+        #     ns = y.sum(0, keepdims=True)
+        #     ns[ns == 0] = 1e-10
+        #     dy -= y / ns * dy.sum(0, keepdims=True)
+        # else:
+        #     pass
         if t <= self.Year0:
-            ns = y.sum(0, keepdims=True)
-            ns[ns == 0] = 1e-10
-            dy -= y / ns * dy.sum(0, keepdims=True)
-        else:
-            pass
+            dy -= y / y.sum() * dy.sum()
 
         return dy.reshape(-1)
 
@@ -204,8 +231,7 @@ class Model:
 
     def simulate(self, p):
         p0 = p
-        if 'sus' not in p:
-            p = self.update_parameters(p)
+        p = self.update_parameters(p)
 
         ys, ms, msg = simulate(self,
                                pars=p,
@@ -244,24 +270,27 @@ if __name__ == '__main__':
     m = Model(inputs, year0=1970)
 
     sc = get_bn()
-    p0 = sample(sc)
+    p0 = sample(sc, {'rr_risk_comorb': 1})
 
     ys, ms, msg = m.simulate(p0)
     ys = ys.y.T[-1]
     _, ms1, _ = m.simulate_onward(ys, p0)
-    _, ms2, _ = m.simulate_onward(ys, p0, intv={})
+    _, ms2, _ = m.simulate_onward(ys, p0, intv={'ACF': {'Scale': 1, 'Type': 'mod'}})
 
-    ms = pd.concat([ms, ms1.iloc[1:]])
+    # ms = pd.concat([ms, ms1.iloc[1:]])
     # ms = ms[ms.index > 2000]
     # ms.Pop.plot()
-    # ms.Pop_rural.plot()
-    # ms.Pop_urban.plot()
-    # ms.Pop_slum.plot()
+    # ms.Pop_RiskLo.plot()
+    # ms.Pop_RiskHi.plot()
+
+    # ms.PropComorb.plot()
 
     # ms.LTBI.plot()
-    # ms.LTBI_rural.plot()
-    # ms.LTBI_urban.plot()
-    # ms.LTBI_slum.plot()
+    # ms.LTBI_RiskLo.plot()
+    # ms.LTBI_RiskHi.plot()
+
+    # ms.RR_inf_comorb.plot()
+    # ms.RR_inc_comorb.plot()
 
     # ms.Prev.plot()
     # ms.Prev_DS.plot()
@@ -275,13 +304,13 @@ if __name__ == '__main__':
     # ms.CNR_Pub.plot()
     # ms.CNR_Pri.plot()
 
-    ms.PrSp_Asym.plot()
-    ms.PrSp_Sym.plot()
-    ms.PrSym.plot()
-    ms.PrDR_Inc.plot()
-
+    # ms.PrSp_Asym.plot()
+    # ms.PrSp_Sym.plot()
+    # ms.PrSym.plot()
+    # ms.PrDR_Inc.plot()
+    # ms.IncR.plot()
     # ms1.IncR.plot()
-    # # ms2.IncR.plot()
+    # ms2.IncR.plot()
     # ms.IncR_DS.plot()
     # ms.IncR_DR.plot()
     # ms.PrDR_Inc.plot()
@@ -289,6 +318,10 @@ if __name__ == '__main__':
     # ms.IncR_urban.plot()
     # ms.IncR_slum.plot()
 
+    # ms.IncR_DS.plot()
+    ms.IncR_DR.plot()
+    # ms1.IncR_DR.plot()
+    ms2.IncR_DR.plot()
 
     plt.legend()
     plt.show()

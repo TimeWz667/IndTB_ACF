@@ -1,5 +1,6 @@
 from sims_pars.fitting.base import AbsObjectiveSimBased
 from itertools import groupby
+from sim.util import simulate
 import pandas as pd
 import numpy as np
 import json
@@ -30,7 +31,6 @@ class Objective(AbsObjectiveSimBased):
 
     def simulate(self, pars):
         time.sleep(0.001)
-
         return self.Model.simulate(pars)
 
     def link_likelihood(self, sim):

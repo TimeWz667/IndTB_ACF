@@ -34,6 +34,25 @@ targets <- jsonlite::read_json(here::here("data", "targets.json")) %>%
 
 sims %>% 
   mutate(Year = Time + 0.5) %>% 
+  select(Year, Prev, ARTI, PrDR_Inc, Key) %>% 
+  pivot_longer(- c(Year, Key), names_to = "Index") %>% 
+  filter(Year > 2000) %>% 
+  ggplot(aes(x = Year)) +
+  geom_line(aes(y = value, group = Key, colour = "Simulation"), alpha = 0.2) +
+  geom_pointrange(data = targets %>% filter(Index %in% c("Prev", "ARTI", "PrDR_Inc")), 
+             aes(y = M, ymin = L, ymax = U, colour = "Target")) + 
+  scale_y_continuous("per 100 000", labels = scales::percent) + 
+  scale_x_continuous("Year", breaks = c(2010, 2015, 2020), limits = c(2000, 2020)) + 
+  scale_color_discrete("") +
+  facet_grid(Index~., labeller = labeller(Index = c(Prev="Prevalence", ARTI = "ARTI", PrDR_Inc = "Pr(DR|Incidence)")))
+
+
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+sims %>% 
+  mutate(Year = Time + 0.5) %>% 
   select(Year, Inc = IncR, Mor = MorR, Prev, Key) %>% 
   pivot_longer(- c(Year, Key), names_to = "Index") %>% 
   ggplot(aes(x = Year)) +
@@ -43,6 +62,28 @@ sims %>%
   scale_x_continuous("Year", breaks = c(2010, 2015, 2020), limits = c(2010, 2020)) + 
   scale_color_discrete("") +
   facet_grid(Index~., labeller = labeller(Index = c(Inc = "Incidence", Mor = "Mortality", Prev = "Prevalence")))
+
+
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+
+sims %>% 
+  mutate(Year = Time + 0.5) %>% 
+  select(Year, PrSym, PrSp_Asym, PrSp_Sym, Key) %>% 
+  pivot_longer(c(PrSym, PrSp_Asym, PrSp_Sym), names_to = "Index") %>% 
+  group_by(Year, Index) %>% 
+  summarise(
+    SimM = median(value),
+    SimL = quantile(value, 0.25),
+    SimU = quantile(value, 0.75)
+  ) %>% 
+  ungroup() %>% 
+  inner_join(targets) %>% 
+  ggplot() +
+  geom_pointrange(aes(x = Index, y = SimM, ymin = SimL, ymax = SimU, colour = "Simulation")) +
+  geom_pointrange(aes(x = Index, y = M, ymin = L, ymax = U, colour = "Data"))
 
 
 ```

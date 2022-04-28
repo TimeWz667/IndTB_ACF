@@ -144,5 +144,5 @@ Dim_qr = (len(Sub_Resist), len(Sub_Smear))
 
 # Second dim
 N_State_Strata = 2
-NoDM, DM = 0, 1
+RiskLo, RiskHi = 0, 1
 Tag_Strata = ['RiskLo', 'RiskHi']

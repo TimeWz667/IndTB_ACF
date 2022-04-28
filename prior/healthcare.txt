@@ -4,32 +4,31 @@ PCore healthcare {
     r_cs_c ~ triangle(9, 12, 15)
 
     // PCF
-    p_entry_pri ~ triangle(0.4, 0.5, 0.6)
-    p_entry_pub = 1 - p_entry_pri
+    p_entry_pri = 0.5
 
-    p_dx_pub ~ triangle(0.81, 0.83, 0.85)
-    p_dx_pri ~ triangle(0.6, 0.7, 0.8)
+    p_dx_pub = 0.83
+    p_dx_pri = 0.7
 
-    p_txf_pub ~ triangle(0.85, 0.88, 0.91)
-    p_txf_pri ~ triangle(0.6, 0.7, 0.8)
-    p_txs_pub ~ triangle(0.85, 0.88, 0.91)
+    p_txf_pub = 0.88
+    p_txf_pri = 0.7
+    p_txs_pub = 0.88
     p_txs_pri = 0
 
-    p_dst_pcf ~ triangle(0.08, 0.12, 0.20)
+    p_dst_pcf = 0.12
 
     // ACF
     sens_acf_sp_high = 1
-    sens_acf_sn_high ~ triangle(0.6, 0.7, 0.8)
-    spec_acf_high ~ triangle(0.9, 0.99, 1)
-    p_dst_acf_high ~ triangle(0.9, 0.95, 0.97)
+    sens_acf_sn_high = 0.7
+    spec_acf_high = 0.99
+    p_dst_acf_high = 0.95
 
     sens_acf_sp_mod = 1
     sens_acf_sn_mod = 0
-    spec_acf_mod ~ triangle(0.93, 0.98, 1)
+    spec_acf_mod = 0.98
     p_dst_acf_mod = 0
 
-    sens_acf_screen ~ triangle(0.58, 0.7, 0.82)
-    sens_acf_screen ~ triangle(0.35, 0.61, 0.87)
+    sens_acf_screen = 0.7
+    spec_acf_screen = 0.61
 
     r_acf_screen = 365
     r_acf_dx = 52
@@ -37,17 +36,17 @@ PCore healthcare {
     // Tx
     r_succ_txf = 2
     r_succ_txs = 0.5
-    p_succ_txf_pub ~ triangle(0.83, 0.85, 0.87)
-    p_succ_txf_pri ~ triangle(0.5, 0.6, 0.7)
+    p_succ_txf_pub = 0.85
+    p_succ_txf_pri = 0.6
 
     r_succ_txf_pub = r_succ_txf
     r_succ_txf_pri = r_succ_txf
     r_ltfu_txf_pub = r_succ_txf * (1 - p_succ_txf_pub) / p_succ_txf_pub
     r_ltfu_txf_pri = r_succ_txf * (1 - p_succ_txf_pri) / p_succ_txf_pri
 
-    p_succ_txs_pub ~ triangle(0.44, 0.46, 0.5)
+    p_succ_txs_pub = 0.46
     p_succ_txs_pri = 0
-    p_tr_pub ~ triangle(0.85, 0.88, 0.92)
+    p_tr_pub = 0.88
     r_mdr_tx = 0.01  # DR acquired from tx
 
     r_succ_txs_pub = r_succ_txs
