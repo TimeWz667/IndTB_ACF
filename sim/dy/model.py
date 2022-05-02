@@ -270,14 +270,14 @@ if __name__ == '__main__':
     m = Model(inputs, year0=1970)
 
     sc = get_bn()
-    p0 = sample(sc, {'rr_risk_comorb': 1})
+    p0 = sample(sc, {'rr_risk_comorb': 20})
 
     ys, ms, msg = m.simulate(p0)
     ys = ys.y.T[-1]
     _, ms1, _ = m.simulate_onward(ys, p0)
     _, ms2, _ = m.simulate_onward(ys, p0, intv={'ACF': {'Scale': 1, 'Type': 'mod'}})
 
-    # ms = pd.concat([ms, ms1.iloc[1:]])
+    ms = pd.concat([ms, ms1.iloc[1:]])
     # ms = ms[ms.index > 2000]
     # ms.Pop.plot()
     # ms.Pop_RiskLo.plot()
@@ -292,9 +292,11 @@ if __name__ == '__main__':
     # ms.RR_inf_comorb.plot()
     # ms.RR_inc_comorb.plot()
 
-    # ms.Prev.plot()
-    # ms.Prev_DS.plot()
-    # ms.Prev_DR.plot()
+    ms.Prev.plot()
+    ms.Prev_RiskLo.plot()
+    ms.Prev_RiskHi.plot()
+    ms2.Prev_RiskLo.plot()
+    ms2.Prev_RiskHi.plot()
     # ms.PrPrev_DR.plot()
 
     # ms.IncR.plot()
@@ -319,9 +321,9 @@ if __name__ == '__main__':
     # ms.IncR_slum.plot()
 
     # ms.IncR_DS.plot()
-    ms.IncR_DR.plot()
+    # ms.IncR_DR.plot()
     # ms1.IncR_DR.plot()
-    ms2.IncR_DR.plot()
+    # ms2.IncR_DR.plot()
 
     plt.legend()
     plt.show()

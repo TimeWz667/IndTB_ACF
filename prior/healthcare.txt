@@ -33,6 +33,8 @@ PCore healthcare {
     r_acf_screen = 365
     r_acf_dx = 52
 
+    rr_acf_comorb ~ unif(1, 30)
+
     // Tx
     r_succ_txf = 2
     r_succ_txs = 0.5

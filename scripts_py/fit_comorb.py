@@ -20,19 +20,22 @@ if __name__ == '__main__':
     import pandas as pd
     import pickle as pkl
 
-    smc = ApproxBayesComSMC(max_round=40, n_collect=200, n_core=4, verbose=8)
+    smc = ApproxBayesComSMC(max_round=40, n_collect=100, n_core=4, verbose=8)
 
-    for risk in [1.5, 2, 2.5]:
-        for pr in [0.5, 0.1, 0.2]:
-            out_path = f'../out/dy_{pr:.0%}_{risk}'
+    # for or_comorb in [1]:
+    #     for pr in [0.5, 0.1]:
+
+    for or_comorb in [1, 2, 5]:
+        for pr in [0.05, 0.1, 0.2]:
+            out_path = f'../out/dy_{pr:.0%}_{or_comorb}'
             os.makedirs(out_path, exist_ok=True)
             exo = {
-                'p_comorb': pr,
-                'rr_risk_comorb': risk
+                'p_comorb': pr
             }
             to_fit = Objective(bn=bn,
                                model=m,
                                filepath_targets='../data/Targets.json',
+                               or_prev=or_comorb,
                                exo=exo)
 
             smc.fit(to_fit)

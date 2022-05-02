@@ -60,13 +60,19 @@ class Transmission(Process):
         infection_ds = infection_ds.sum(0)
         infection_dr = infection_dr.sum(0)
 
+        pr0 = pars['p_primary']
+        rr = pars['rr_risk_comorb']
+        r_act = 0.5 * pr0 / (1 - pr0) * rr
+        pr1 = r_act / (0.5 + r_act)
+        pr = np.array([pr0, pr1]).reshape((1, -1))
+
         calc['act'] = act = np.zeros((2, I.N_State_Strata))
-        act[I.Sub_DS] = infection_ds * pars['p_primary']
-        act[I.Sub_DR] = infection_dr * pars['p_primary']
+        act[I.Sub_DS] = infection_ds * pr
+        act[I.Sub_DR] = infection_dr * pr
 
         calc['lat'] = lat = np.zeros((2, I.N_State_Strata))
-        lat[I.Sub_DS] = infection_ds * (1 - pars['p_primary'])
-        lat[I.Sub_DR] = infection_dr * (1 - pars['p_primary'])
+        lat[I.Sub_DS] = infection_ds * (1 - pr)
+        lat[I.Sub_DR] = infection_dr * (1 - pr)
 
     def measure(self, t, y, pars, calc, mea):
         I = self.Keys

@@ -103,3 +103,5 @@ class Progression(Process):
             mea[f'LTBI_{strata}'] = ltbi[i] / n
 
         mea['RR_inc_comorb'] = mea['IncR_RiskHi'] / mea['IncR_RiskLo']
+        p1, p0 = mea['Prev_RiskHi'], mea['Prev_RiskLo']
+        mea['OR_prev_comorb'] = (p1 / (1 - p1)) / (p0 / (1 - p0))

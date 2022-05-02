@@ -3,5 +3,5 @@ PCore Demography {
     r_growth = 0.0175
 
     p_comorb = 0.1
-    rr_risk_comorb = 1
+    rr_risk_comorb ~ unif(1, 10)
 }

@@ -12,12 +12,20 @@ __all__ = ['Objective']
 
 
 class Objective(AbsObjectiveSimBased):
-    def __init__(self, model, bn, filepath_targets, exo=None):
+    def __init__(self, model, bn, filepath_targets, or_prev=1, exo=None):
         AbsObjectiveSimBased.__init__(self, bn, exo=exo)
         self.Model = model
         self.Data = dict()
 
         targets = json.load(open(filepath_targets, 'r'))
+        targets['All'].append({
+          "Year": 2020,
+          "Index": "OR_prev_comorb",
+          "Tag": "All",
+          "M": or_prev,
+          "L": or_prev - 0.1,
+          "U": or_prev + 0.1
+        })
         for gp, ds in targets.items():
             self.Data[gp] = dict()
             for k, vs in groupby(ds, key=lambda x: x['Index']):

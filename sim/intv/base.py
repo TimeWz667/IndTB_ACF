@@ -24,29 +24,25 @@ class ACF(BaseModel):
 
 class Intervention(BaseModel):
     ACF: ACF = ACF()
-    T0_Intv: float = 2022
-    T1_Intv: float = 2025
+    T0_Intv: float = 2020
+    T1_Intv: float = 2023
 
-    def modify_acf(self, t, r_acf, p_dst, pars):
+    def modify_acf(self, t, r_acf0, r_acf, p_dst, pars):
         if t > self.T0_Intv and self.ACF.Scale > 0:
-            wt = scale_up(t, self.T0_Intv, self.T1_Intv) * self.ACF.Scale * pars['sens_acf_screen']
+            wt = scale_up(t, self.T0_Intv, self.T1_Intv) * self.ACF.Scale
+            r_acf0 = wt
+            type = self.ACF.Type
 
-            if self.ACF.Type == 'mod':
-                sens = np.array([
-                    pars['sens_acf_sn_mod'], pars['sens_acf_sp_mod'],
-                    pars['sens_acf_sn_mod'], pars['sens_acf_sp_mod']
-                ]).reshape((-1, 1))
-                p_dst = pars['p_dst_acf_mod']
-            else:
-                sens = np.array([
-                    pars['sens_acf_sn_high'], pars['sens_acf_sp_high'],
-                    pars['sens_acf_sn_high'], pars['sens_acf_sp_high']
-                ]).reshape((-1, 1))
-                p_dst = pars['p_dst_acf_high']
+            sens = np.array([
+                pars[f'sens_acf_sn_{type}'], pars[f'sens_acf_sp_{type}'],
+                pars[f'sens_acf_sn_{type}'], pars[f'sens_acf_sp_{type}']
+            ]).reshape((-1, 1))
+            p_dst = pars[f'p_dst_acf_{type}']
+
             p_dst = wt * p_dst
-            r_acf = wt * sens
+            r_acf = wt * sens * pars['sens_acf_screen']
 
-        return r_acf, p_dst
+        return r_acf0, r_acf, p_dst
 
 
 if __name__ == '__main__':

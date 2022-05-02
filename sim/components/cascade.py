@@ -56,16 +56,26 @@ class Cascade(Process):
 
         # ACF
 
-        r_acf, p_dst = 0, 0
+        r_acf, r_acf_det, p_dst = 0, 0, 0
         if t > self.Intervention.T0_Intv:
-            r_acf, p_dst = self.Intervention.modify_acf(t, r_acf, p_dst, pars)
+            r_acf, r_acf_det, p_dst = self.Intervention.modify_acf(t, r_acf, r_acf_det, p_dst, pars)
+
+            # if r_acf_det > 0:
+            #     rr_acf_risk = pars['rr_acf_comorb']
+            #     temp = y.sum(0) * np.array([1, rr_acf_risk])
+            #     temp / temp.sum()
+            #     r_acf0_risk = (r_acf0 * y).sum() / (y.sum(0) * np.array([1, rr_acf_risk])).sum()
+            #     r_acf = r_acf * r_acf0_risk / r_acf0
+
+            if np.any(r_acf_det > 0):
+                r_acf_det = np.concatenate([np.zeros((4, 1)), r_acf_det], axis=1)
 
         p_dst_acf = np.array([0, 0, p_dst, p_dst]).reshape((-1, 1))
 
-        calc['acf_txf_pub_s'] = r_acf * (1 - p_dst_acf) * y[I.Sym]
-        calc['acf_txf_pub_c'] = r_acf * (1 - p_dst_acf) * y[I.ExSym]
-        calc['acf_txs_pub_s'] = r_acf * p_dst_acf * y[I.Sym]
-        calc['acf_txs_pub_c'] = r_acf * p_dst_acf * y[I.ExSym]
+        calc['acf_txf_pub_s'] = r_acf_det * (1 - p_dst_acf) * y[I.Sym]
+        calc['acf_txf_pub_c'] = r_acf_det * (1 - p_dst_acf) * y[I.ExSym]
+        calc['acf_txs_pub_s'] = r_acf_det * p_dst_acf * y[I.Sym]
+        calc['acf_txs_pub_c'] = r_acf_det * p_dst_acf * y[I.ExSym]
 
         # Tx
         r_succ_txf_pub, r_succ_txf_pri = pars['r_succ_txf_pub'], pars['r_succ_txf_pri']
@@ -104,14 +114,16 @@ class Cascade(Process):
         ns = y.sum(0)
         n = ns.sum()
 
-        det_pub = calc['det_txf_pub_s'] + calc[f'det_txf_pub_c'] + calc['det_txs_pub_s'] + calc[f'det_txs_pub_c']
+        det_pub = calc['det_txf_pub_s'] + calc['det_txf_pub_c'] + calc['det_txs_pub_s'] + calc['det_txs_pub_c']
         det_pri = calc['det_txf_pri_s'] + calc['det_txf_pri_c']
+        det_acf = calc['acf_txf_pub_s'] + calc['acf_txf_pub_c'] + calc['acf_txs_pub_s'] + calc['acf_txs_pub_c']
 
-        det = det_pub + det_pri
+        det = det_pub + det_pri + det_acf
 
         mea['CNR'] = det.sum() / n
         mea['CNR_Pub'] = det_pub.sum() / n
         mea['CNR_Pri'] = det_pri.sum() / n
+        mea['CNR_Acf'] = det_acf.sum() / n
         mea['CNR_DS'] = det[2:].sum() / n
         mea['CNR_DR'] = det[:2].sum() / n
 
@@ -120,3 +132,4 @@ class Cascade(Process):
             mea[f'CNR_{strata}'] = det[:, i].sum() / n
             mea[f'CNR_DS_{strata}'] = det[2:, i].sum() / n
             mea[f'CNR_DR_{strata}'] = det[:2, i].sum() / n
+            mea[f'CNR_Acf_{strata}'] = det_acf[:, i].sum() / n
