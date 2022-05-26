@@ -60,17 +60,13 @@ class Cascade(Process):
         if t > self.Intervention.T0_Intv:
             r_acf, r_acf_det, p_dst = self.Intervention.modify_acf(t, r_acf, r_acf_det, p_dst, pars)
 
-            # if r_acf_det > 0:
-            #     rr_acf_risk = pars['rr_acf_comorb']
-            #     temp = y.sum(0) * np.array([1, rr_acf_risk])
-            #     temp / temp.sum()
-            #     r_acf0_risk = (r_acf0 * y).sum() / (y.sum(0) * np.array([1, rr_acf_risk])).sum()
-            #     r_acf = r_acf * r_acf0_risk / r_acf0
-
             if np.any(r_acf_det > 0):
                 r_acf_det = np.concatenate([np.zeros((4, 1)), r_acf_det], axis=1)
 
         p_dst_acf = np.array([0, 0, p_dst, p_dst]).reshape((-1, 1))
+
+        calc['acf_s'] = r_acf * y[I.Sym]
+        calc['acf_c'] = r_acf * y[I.ExSym]
 
         calc['acf_txf_pub_s'] = r_acf_det * (1 - p_dst_acf) * y[I.Sym]
         calc['acf_txf_pub_c'] = r_acf_det * (1 - p_dst_acf) * y[I.ExSym]
@@ -133,3 +129,8 @@ class Cascade(Process):
             mea[f'CNR_DS_{strata}'] = det[2:, i].sum() / n
             mea[f'CNR_DR_{strata}'] = det[:2, i].sum() / n
             mea[f'CNR_Acf_{strata}'] = det_acf[:, i].sum() / n
+
+        mea['N_Pub_Detected'] = det_pub.sum()
+        mea['N_Pri_Detected'] = det_pri.sum()
+        mea['N_ACF_Detected'] = det_acf.sum()
+        mea['N_ACF_Reached'] = (calc['acf_s'] + calc['acf_c']).sum()

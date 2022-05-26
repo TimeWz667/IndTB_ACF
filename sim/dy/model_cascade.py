@@ -1,120 +1,39 @@
 import numpy as np
-import pandas as pd
-from sim.components import Demography, Transmission, Progression, Cascade
-from sim.intv import Intervention
-from sim.util import simulate, update_intv
+from sim.dy.model import Model
 import sim.dy.keys as I
+from sim.util import update_intv
 
 __author__ = 'Chu-Chang Ku'
-__all__ = ['Model']
+__all__ = ['ModelCascade']
 
 
-class Model:
-    def __init__(self, inp, year0=2010):
-        self.Inputs = inp
-
-        intv = Intervention()
-        self.Demography = Demography(I, intv)
-        self.Transmission = Transmission(I, intv)
-        self.Progression = Progression(I, intv)
-        self.Cascade = Cascade(I, intv)
-        self.__intervention = intv
-
-        self.Year0 = year0
-
-    @property
-    def Intervention(self):
-        return self.__intervention
-
-    @Intervention.setter
-    def Intervention(self, intv):
-        if isinstance(intv, dict):
-            intv = Intervention.parse_obj(intv)
-
-        self.__intervention = intv
-        self.Demography.Intervention = intv
-        self.Transmission.Intervention = intv
-        self.Progression.Intervention = intv
-        self.Cascade.Intervention = intv
-
-    def update_parameters(self, pars):
-        pars = dict(pars)
-
-        pars.update({
-            'r_succ_txf_pub': pars['r_succ_txf'],
-            'r_succ_txf_pri': pars['r_succ_txf'],
-            'r_ltfu_txf_pub': pars['r_succ_txf'] * (1 - pars['p_succ_txf_pub']) / pars['p_succ_txf_pub'],
-            'r_ltfu_txf_pri': pars['r_succ_txf'] * (1 - pars['p_succ_txf_pri']) / pars['p_succ_txf_pri'],
-        })
-
-        pars.update({
-            'r_succ_txs_pub': pars['r_succ_txs'],
-            'r_succ_txs_pri': 0,
-            'r_ltfu_txs_pub': pars['r_succ_txs'] * (1 - pars['p_succ_txs_pub']) / pars['p_succ_txs_pub'],
-            'r_ltfu_txs_pri': pars['r_succ_txs']
-        })
-
-        pars['sus'] = sus = np.zeros((I.N_State_TB, I.N_State_Strata))
-        sus[I.U] = 1
-        sus[I.SLat] = pars['rr_sus_ltbi']
-        sus[I.RLow] = pars['rr_sus_ltbi']
-        sus[I.RHigh] = pars['rr_sus_ltbi']
-        sus[I.RSt] = pars['rr_sus_ltbi']
-        # sus[: I.RiskHi] *= pars['rr_risk_comorb']
-
-        pars['trans_ds'] = trans = np.zeros((I.N_State_TB, I.N_State_Strata))
-        trans[I.Infectious_Sn_DS] = pars['rr_inf_sn']
-        trans[I.Infectious_Sp_DS] = 1
-
-        pars['trans_dr'] = trans = np.zeros((I.N_State_TB, I.N_State_Strata))
-        trans[I.Infectious_Sn_DR] = pars['rr_inf_sn']
-        trans[I.Infectious_Sp_DR] = 1
-
-        pars['mixing'] = np.ones((I.N_State_Strata, I.N_State_Strata))
-
-        return pars
-
-    def get_y0(self, pars):
-        y0 = np.zeros((I.N_State_TB, I.N_State_Strata))
-        n0 = np.array([self.Inputs['N0'], 0])
-
-        y0[I.Sym] = 1e-2 * n0
-        y0[I.SLat] = 0.4 * n0
-        y0[I.U] = n0 - y0.sum(0)
-        return y0
-
-    def collect_calc(self, t, y, pars):
-        #t = max(t, self.Year0)
-
-        calc = dict()
-        self.Demography(t, y, pars, calc)
-        self.Transmission(t, y, pars, calc)
-        self.Progression(t, y, pars, calc)
-        self.Cascade(t, y, pars, calc)
-        return calc
+class ModelCascade(Model):
+    def __init__(self, inp, year0=2010, year=2022):
+        Model.__init__(self, inp, year0=year0)
+        self.Year = year
 
     def __call__(self, t, y, pars):
         y = y.reshape((I.N_State_TB, I.N_State_Strata))
 
-        calc = self.collect_calc(t, y, pars)
+        calc = self.collect_calc(self.Year, y, pars)
 
         dy = np.zeros_like(y)
         #
-        dy -= calc['infection_ds'] + calc['infection_dr']
-
-        dy[I.SLat] += calc['lat']
-
-        dy[I.SLat] -= calc['react']
-        dy[I.RLow] -= calc['rel_tc']
-        dy[I.RHigh] -= calc['rel_td']
-        dy[I.RSt] -= calc['rel_st']
+        # dy -= calc['infection_ds'] + calc['infection_dr']
         #
-        dy[I.Asym] += calc['inc_smr']
+        # dy[I.SLat] += calc['lat']
+        #
+        # dy[I.SLat] -= calc['react']
+        # dy[I.RLow] -= calc['rel_tc']
+        # dy[I.RHigh] -= calc['rel_td']
+        # dy[I.RSt] -= calc['rel_st']
+        # #
+        # dy[I.Asym] += calc['inc_smr']
 
         # Progression
-        dy[I.RLow] -= calc['stab_tc']
-        dy[I.RHigh] -= calc['stab_td']
-        dy[I.RSt] += calc['stab_tc'] + calc['stab_td']
+        # dy[I.RLow] -= calc['stab_tc']
+        # dy[I.RHigh] -= calc['stab_td']
+        # dy[I.RSt] += calc['stab_tc'] + calc['stab_td']
         #
         dy[I.Asym] -= calc['sc_a'] + calc['sym_onset']
         dy[I.Sym] += calc['sym_onset'] - calc['sc_s']
@@ -125,7 +44,7 @@ class Model:
         sc[0] = sc_asc[0] + sc_asc[2]
         sc[1] = sc_asc[1] + sc_asc[3]
 
-        dy[I.RHigh] += sc[0] + sc[1]
+        # dy[I.RHigh] += sc[0] + sc[1]
 
         # Smear convertion
         con_a, con_s, con_c = calc['convert_a'], calc['convert_s'], calc['convert_c']
@@ -175,10 +94,10 @@ class Model:
         dy[I.Txs_Pub] -= tc_2_pub + td_2_pub
         dy[I.Txs_Pri] -= tc_2_pri + td_2_pri
 
-        tc = tc_1_pub + tc_1_pri + tc_2_pub + tc_2_pri
-        td = td_1_pub + td_1_pri + td_2_pub + td_2_pri
-        dy[I.RLow] += tc[[0, 2]] + tc[[1, 3]]
-        dy[I.RHigh] += td[[0, 2]] + td[[1, 3]]
+        # tc = tc_1_pub + tc_1_pri + tc_2_pub + tc_2_pri
+        # td = td_1_pub + td_1_pri + td_2_pub + td_2_pri
+        # dy[I.RLow] += tc[[0, 2]] + tc[[1, 3]]
+        # dy[I.RHigh] += td[[0, 2]] + td[[1, 3]]
 
         tx_switch_pub = calc['tx_switch_pub']
         dy[I.Txf_Pub] -= tx_switch_pub
@@ -191,11 +110,11 @@ class Model:
         # dy[I.U] += (calc['clear_sl'] + calc['clear_rst'])
 
         # Demography
-        dy[I.U, 0] += calc['births']
+        # dy[I.U, 0] += calc['births']
         dy -= calc['deaths'] + calc['deaths_tb']
 
-        dy[:, 0] -= calc['prog_comorb']
-        dy[:, 1] += calc['prog_comorb']
+        # dy[:, 0] -= calc['prog_comorb']
+        # dy[:, 1] += calc['prog_comorb']
 
         # if t <= self.Year0:
         #     ns = y.sum(0, keepdims=True)
@@ -203,8 +122,8 @@ class Model:
         #     dy -= y / ns * dy.sum(0, keepdims=True)
         # else:
         #     pass
-        if t <= self.Year0:
-            dy -= y / y.sum() * dy.sum()
+        # if t <= self.Year0:
+        #     dy -= y / y.sum() * dy.sum()
 
         return dy.reshape(-1)
 
@@ -223,29 +142,19 @@ class Model:
 
     @staticmethod
     def dfe(t, y, pars):
-        ntb = y.reshape((I.N_State_TB, I.N_State_Strata))[I.Infectious].sum()
-        return ntb - 0.5
+        return 1
 
     dfe.terminal = True
     dfe.direction = -1
 
     def simulate(self, p):
-        p0 = p
-        p = self.update_parameters(p)
-
-        ys, ms, msg = simulate(self,
-                               pars=p,
-                               t_warmup=300,
-                               t_out=np.linspace(1970, 2020, int(50 * 2) + 1),
-                               dfe=self.dfe)
-        msg['pars'] = p0
-        return ys, ms, msg
+        raise AttributeError
 
     def simulate_onward(self, y0, p, intv=None, t_end=2030, dt=0.5):
         if intv is None:
             intv = self.Intervention
 
-        t_start = 2020
+        t_start = self.Year
         p0 = p
         if 'sus' not in p:
             p = self.update_parameters(p)
@@ -267,21 +176,24 @@ if __name__ == '__main__':
 
     inputs = load_inputs('../../data/pars.json')
 
-    m = Model(inputs, year0=1970)
+    m = ModelCascade(inputs, year0=1970, year=2022)
 
     sc = get_bn()
     p0 = sample(sc, {'rr_risk_comorb': 20})
 
-    ys, ms, msg = m.simulate(p0)
-    ys = ys.y.T[-1]
-    _, ms1, _ = m.simulate_onward(ys, p0)
-    _, ms2, _ = m.simulate_onward(ys, p0, intv={'ACF': {'Scale': 1, 'Type': 'mod'}})
+    y0 = np.zeros_like(m.get_y0(p0))
+    y0[I.Asym_Sn_DS, I.RiskHi] = 1
+    y0 = y0.reshape(-1)
 
-    ms = pd.concat([ms, ms1.iloc[1:]])
+    _, ms1, _ = m.simulate_onward(y0, p0)
+    _, ms2, _ = m.simulate_onward(y0, p0, intv={'ACF': {'Scale': 1, 'Type': 'mod'}})
+
     # ms = ms[ms.index > 2000]
     # ms.Pop.plot()
     # ms.Pop_RiskLo.plot()
     # ms.Pop_RiskHi.plot()
+    ms1.Pop.plot()
+    ms2.Pop.plot()
 
     # ms.PropComorb.plot()
 
@@ -292,11 +204,10 @@ if __name__ == '__main__':
     # ms.RR_inf_comorb.plot()
     # ms.RR_inc_comorb.plot()
 
-    ms.Prev.plot()
-    ms.Prev_RiskLo.plot()
-    ms.Prev_RiskHi.plot()
-    ms2.Prev_RiskLo.plot()
-    ms2.Prev_RiskHi.plot()
+    # ms1.Prev_RiskLo.plot()
+    # ms1.Prev_RiskHi.plot()
+    # ms2.Prev_RiskLo.plot()
+    # ms2.Prev_RiskHi.plot()
     # ms.PrPrev_DR.plot()
 
     # ms.IncR.plot()
@@ -305,6 +216,8 @@ if __name__ == '__main__':
     # ms.CNR.plot()
     # ms.CNR_Pub.plot()
     # ms.CNR_Pri.plot()
+    # ms1.CNR_Pub.plot()
+    # ms2.CNR_Pub.plot()
 
     # ms.PrSp_Asym.plot()
     # ms.PrSp_Sym.plot()

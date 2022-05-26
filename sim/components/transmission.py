@@ -101,4 +101,7 @@ class Transmission(Process):
             mea[f'ARTI_{strata}'] = inf[i] / n
             mea[f'LTBI_{strata}'] = ltbi[i] / n
 
-        mea['RR_inf_comorb'] = mea['ARTI_RiskHi'] / mea['ARTI_RiskLo']
+        if mea['ARTI_RiskLo'] <= 0:
+            mea['RR_inf_comorb'] = 0
+        else:
+            mea['RR_inf_comorb'] = mea['ARTI_RiskHi'] / mea['ARTI_RiskLo']

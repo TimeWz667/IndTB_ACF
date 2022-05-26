@@ -22,12 +22,32 @@ class ACF(BaseModel):
     SensScreen: confloat(ge=0, le=1) = 0
 
 
+class ACFPlain(BaseModel):
+    R_ACF: confloat(ge=0) = 0
+    Type: str = 'mod'
+
+
 class Intervention(BaseModel):
     ACF: ACF = ACF()
+    ACFPlain: ACFPlain = ACFPlain()
     T0_Intv: float = 2020
     T1_Intv: float = 2023
 
     def modify_acf(self, t, r_acf0, r_acf, p_dst, pars):
+        if self.ACFPlain.R_ACF > 0:
+            r_acf0 = self.ACFPlain.R_ACF
+            type = self.ACFPlain.Type
+
+            sens = np.array([
+                pars[f'sens_acf_sn_{type}'], pars[f'sens_acf_sp_{type}'],
+                pars[f'sens_acf_sn_{type}'], pars[f'sens_acf_sp_{type}']
+            ]).reshape((-1, 1))
+            p_dst = pars[f'p_dst_acf_{type}']
+
+            p_dst = p_dst
+            r_acf = r_acf0 * sens * pars['sens_acf_screen']
+            return r_acf0, r_acf, p_dst
+
         if t > self.T0_Intv and self.ACF.Scale > 0:
             wt = scale_up(t, self.T0_Intv, self.T1_Intv) * self.ACF.Scale
             r_acf0 = wt

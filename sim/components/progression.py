@@ -73,10 +73,10 @@ class Progression(Process):
         inc = calc['inc']
 
         mea['IncR'] = inc.sum() / n
-        mea['Recent'] = calc['inc_recent'].sum() / inc.sum()
+        mea['Recent'] = calc['inc_recent'].sum() / max(inc.sum(), 1e-10)
         mea['IncR_DR'] = inc[1].sum() / n
         mea['IncR_DS'] = inc[0].sum() / n
-        mea['PrDR_Inc'] = mea['IncR_DR'] / mea['IncR']
+        mea['PrDR_Inc'] = mea['IncR_DR'] / max(mea['IncR'], 1e-10)
 
         prev_a = y[I.Asym].sum(0)
         prev_s = y[I.Sym].sum(0)
@@ -84,10 +84,11 @@ class Progression(Process):
         prev_sym = prev_s + prev_c
         prev = prev_a + prev_s + prev_c
         mea['Prev'] = prev.sum() / n
+        mea['N_UT'] = prev.sum()
         mea['PrSym'] = prev_sym.sum() / prev.sum()
 
         mea['PrSp_Asym'] = y[I.Asym][[1, 3]].sum() / prev_a.sum()
-        mea['PrSp_Sym'] = (y[I.Sym] + y[I.ExSym])[[1, 3]].sum() / prev_sym.sum()
+        mea['PrSp_Sym'] = (y[I.Sym] + y[I.ExSym])[[1, 3]].sum() / max(prev_sym.sum(), 1e-10)
 
         ltbi = y[I.LTBI].sum(0)
         mea['LTBI'] = ltbi.sum() / n
@@ -102,6 +103,9 @@ class Progression(Process):
             mea[f'Prev_{strata}'] = prev[i] / n
             mea[f'LTBI_{strata}'] = ltbi[i] / n
 
-        mea['RR_inc_comorb'] = mea['IncR_RiskHi'] / mea['IncR_RiskLo']
+        mea['RR_inc_comorb'] = mea['IncR_RiskHi'] / max(mea['IncR_RiskLo'], 1e-10)
         p1, p0 = mea['Prev_RiskHi'], mea['Prev_RiskLo']
-        mea['OR_prev_comorb'] = (p1 / (1 - p1)) / (p0 / (1 - p0))
+        if p1 <=0 or p0 <= 0:
+            mea['OR_prev_comorb'] = 0
+        else:
+            mea['OR_prev_comorb'] = (p1 / (1 - p1)) / (p0 / (1 - p0))
