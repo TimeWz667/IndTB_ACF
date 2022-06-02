@@ -101,8 +101,8 @@ class Model:
         dy = np.zeros_like(y)
         #
         dy -= calc['infection_ds'] + calc['infection_dr']
-        dy[I.FLat_DS] += calc['infection_ds'].sum()
-        dy[I.FLat_DR] += calc['infection_dr'].sum()
+        dy[I.FLat_DS] += calc['infection_ds'].sum(0)
+        dy[I.FLat_DR] += calc['infection_dr'].sum(0)
 
         # Incidence
         dy[I.FLat] -= calc['act']
@@ -114,7 +114,6 @@ class Model:
         dy[I.Asym] += calc['inc_smr']
 
         # Progression
-
         dy[I.FLat] -= calc['stab_fl']
         dy[I.SLat] += calc['stab_fl']
         dy[I.RLow] -= calc['stab_tc']
@@ -279,19 +278,23 @@ if __name__ == '__main__':
     ys, ms, msg = m.simulate(p0)
     ys = ys.y.T[-1]
     _, ms1, _ = m.simulate_onward(ys, p0)
-    _, ms2, _ = m.simulate_onward(ys, p0, intv={'ACF': {'Scale': 1, 'Type': 'mod'}})
+    #_, ms2, _ = m.simulate_onward(ys, p0, intv={'ACFPlain': {'R_ACF': 0.2, 'Type': 'mod'}})
+    _, ms2, _ = m.simulate_onward(ys, p0, intv={'ACF': {'Scale': 0.2, 'Type': 'mod'}})
 
     ms = pd.concat([ms, ms1.iloc[1:]])
-    # ms = ms[ms.index > 2000]
-    # ms.Pop.plot()
-    # ms.Pop_RiskLo.plot()
-    # ms.Pop_RiskHi.plot()
+
+    fig, axes = plt.subplots(2, 2)
+
+    ms = ms[ms.index > 2000]
+    ms.Pop.plot(ax=axes[0, 0])
+    ms.Pop_RiskLo.plot(ax=axes[0, 0])
+    ms.Pop_RiskHi.plot(ax=axes[0, 0])
 
     # ms.PropComorb.plot()
 
-    # ms.LTBI.plot()
-    # ms.LTBI_RiskLo.plot()
-    # ms.LTBI_RiskHi.plot()
+    ms.LTBI.plot(ax=axes[0, 1])
+    ms.LTBI_RiskLo.plot(ax=axes[0, 1])
+    ms.LTBI_RiskHi.plot(ax=axes[0, 1])
 
     # ms.RR_inf_comorb.plot()
     # ms.RR_inc_comorb.plot()
@@ -306,23 +309,25 @@ if __name__ == '__main__':
     # ms.IncR.plot()
     # ms.Prev.plot()
     # ms.MorR.plot()
-    # ms.CNR.plot()
-    # ms.CNR_Pub.plot()
-    # ms.CNR_Pri.plot()
+    # ms.CNR_RiskLo.plot(ax=axes[1, 1])
+    # ms1.CNR_RiskLo.plot(ax=axes[1, 1])
+    # ms2.CNR_RiskLo.plot(ax=axes[1, 1])
+
+    ms.CNR.plot(ax=axes[1, 1])
+    ms1.CNR.plot(ax=axes[1, 1])
+    ms2.CNR.plot(ax=axes[1, 1])
 
     # ms.PrSp_Asym.plot()
     # ms.PrSp_Sym.plot()
     # ms.PrSym.plot()
     # ms.PrDR_Inc.plot()
-    # ms.IncR.plot()
-    # ms1.IncR.plot()
-    # ms2.IncR.plot()
-    ms.IncR_DS.plot()
-    ms.IncR_DR.plot()
+    ms.IncR_RiskHi.plot(ax=axes[1, 0])
+    ms1.IncR_RiskHi.plot(ax=axes[1, 0])
+    ms2.IncR_RiskHi.plot(ax=axes[1, 0])
+    # ms.IncR_DS.plot()
+    # ms.IncR_DR.plot()
     # ms.PrDR_Inc.plot()
-    # ms.IncR_rural.plot()
-    # ms.IncR_urban.plot()
-    # ms.IncR_slum.plot()
+
 
     # ms.IncR_DS.plot()
     # ms.IncR_DR.plot()
