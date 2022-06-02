@@ -66,16 +66,18 @@ Txs_Pri_Sp_DS = 26
 Txs_Pri_Sn_DR = 27
 Txs_Pri_Sp_DR = 28
 
-SLat_DS = 29
-SLat_DR = 30
-RLow_DS = 31
-RLow_DR = 32
-RHigh_DS = 33
-RHigh_DR = 34
-RSt_DS = 35
-RSt_DR = 36
+FLat_DS = 29
+FLat_DR = 30
+SLat_DS = 31
+SLat_DR = 32
+RLow_DS = 33
+RLow_DR = 34
+RHigh_DS = 35
+RHigh_DR = 36
+RSt_DS = 37
+RSt_DR = 38
 
-N_State_TB = 37
+N_State_TB = 39
 
 
 # Meta group
@@ -99,6 +101,8 @@ Txf_Pub = [Txf_Pub_Sn_DS, Txf_Pub_Sp_DS, Txf_Pub_Sn_DR, Txf_Pub_Sp_DR]
 Txf_Pri = [Txf_Pri_Sn_DS, Txf_Pri_Sp_DS, Txf_Pri_Sn_DR, Txf_Pri_Sp_DR]
 Txs_Pub = [Txs_Pub_Sn_DS, Txs_Pub_Sp_DS, Txs_Pub_Sn_DR, Txs_Pub_Sp_DR]
 Txs_Pri = [Txs_Pri_Sn_DS, Txs_Pri_Sp_DS, Txs_Pri_Sn_DR, Txs_Pri_Sp_DR]
+
+FLat = [FLat_DS, FLat_DR]
 SLat = [SLat_DS, SLat_DR]
 RLow = [RLow_DS, RLow_DR]
 RHigh = [RHigh_DS, RHigh_DR]
@@ -133,7 +137,7 @@ Infectious.sort()
 
 
 # LTBI
-LTBI = SLat + RLow + RHigh
+LTBI = FLat + SLat + RLow + RHigh + RSt
 LTBI.sort()
 
 Sub_Resist = Sub_DS, Sub_DR = [0, 1]  # q

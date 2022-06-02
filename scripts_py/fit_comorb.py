@@ -20,52 +20,60 @@ if __name__ == '__main__':
     import pandas as pd
     import pickle as pkl
 
-    smc = ApproxBayesComSMC(max_round=40, n_collect=100, n_core=4, verbose=8)
+    smc = ApproxBayesComSMC(max_round=40, n_collect=300, n_core=4, verbose=8)
 
     # for or_comorb in [1]:
     #     for pr in [0.5, 0.1]:
 
-    for or_comorb in [1, 2, 5]:
-        for pr in [0.05, 0.1, 0.2]:
-            out_path = f'../out/dy_{pr:.0%}_{or_comorb}'
-            os.makedirs(out_path, exist_ok=True)
-            exo = {
-                'p_comorb': pr
-            }
-            to_fit = Objective(bn=bn,
-                               model=m,
-                               filepath_targets='../data/Targets.json',
-                               or_prev=or_comorb,
-                               exo=exo)
+    scs = [
+        (4.3, 0.1785, 'sc1-1'),
+        (6.61, 0.007, 'sc2-2'),
+        (2.91, 0.1785, 'sc1-2'),
+        (2.38, 0.1785, 'sc1-3'),
+        (34.7, 0.007, 'sc2-1'),
+        (4,92, 0.007, 'sc2-3'),
+    ]
 
-            smc.fit(to_fit)
+    for or_comorb, pr, title in scs:
+        out_path = f'../out/dy_{title}'
+        os.makedirs(out_path, exist_ok=True)
+        exo = {
+            'p_comorb': pr
+        }
+        to_fit = Objective(bn=bn,
+                           model=m,
+                           filepath_targets='../data/Targets.json',
+                           or_prev=or_comorb,
+                           exo=exo)
 
-            post = smc.Collector
-            print(smc.Monitor.Trajectories)
+        smc.fit(to_fit)
 
-            os.makedirs(out_path, exist_ok=True)
+        post = smc.Collector
+        print(smc.Monitor.Trajectories)
 
-            smc.Monitor.save_trajectories(f'{out_path}/Trace.csv')
-            post.save_to_csv(f'{out_path}/Post.csv')
+        os.makedirs(out_path, exist_ok=True)
 
-            # Posterior run
-            post = [dict(row) for _, row in pd.read_csv(f'{out_path}/Post.csv').iterrows()]
+        smc.Monitor.save_trajectories(f'{out_path}/Trace.csv')
+        post.save_to_csv(f'{out_path}/Post.csv')
 
-            with Parallel(n_jobs=4, verbose=8) as parallel:
-                rss = parallel(delayed(fn_post)(pars, m) for pars in post)
+        # Posterior run
+        post = [dict(row) for _, row in pd.read_csv(f'{out_path}/Post.csv').iterrows()]
 
-            rss = [rs for rs in rss if rs[1] is not None]
+        with Parallel(n_jobs=4, verbose=8) as parallel:
+            rss = parallel(delayed(fn_post)(pars, m) for pars in post)
 
-            yss = [ys for ys, _, _ in rss]
-            mss = [ms for _, ms, _ in rss]
-            pss = [ps for _, _, ps in rss]
+        rss = [rs for rs in rss if rs[1] is not None]
 
-            mss = bind_results(mss)
-            mss.to_csv(f'{out_path}/Runs_Post.csv')
+        yss = [ys for ys, _, _ in rss]
+        mss = [ms for _, ms, _ in rss]
+        pss = [ps for _, _, ps in rss]
 
-            pd.DataFrame(pss).to_csv(f'{out_path}/Post_full.csv')
+        mss = bind_results(mss)
+        mss.to_csv(f'{out_path}/Runs_Post.csv')
 
-            res = [{'y0': list(ys.y[:, -1]), 'pars': pars} for pars, ys in zip(pss, yss)]
+        pd.DataFrame(pss).to_csv(f'{out_path}/Post_full.csv')
 
-            with open(f'{out_path}/y0_national.pkl', 'wb') as f:
-                pkl.dump(res, f)
+        res = [{'y0': list(ys.y[:, -1]), 'pars': pars} for pars, ys in zip(pss, yss)]
+
+        with open(f'{out_path}/y0_national.pkl', 'wb') as f:
+            pkl.dump(res, f)

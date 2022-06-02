@@ -13,6 +13,9 @@ class Progression(Process):
     def __call__(self, t, y, pars, calc):
         I = self.Keys
 
+        pr0 = pars['p_primary']
+        r_act = pars['r_stab'] * pr0 / (1 - pr0)
+
         r_react = pars['r_react']
         r_rel_st, r_rel_tc, r_rel_td = pars['r_relapse_st'], pars['r_relapse_tc'], pars['r_relapse_td']
 
@@ -21,6 +24,8 @@ class Progression(Process):
 
         risk_comorb = np.ones(y[I.SLat].shape)
         risk_comorb[:, I.RiskHi] *= pars['rr_risk_comorb']
+
+        calc['act'] = risk_comorb * r_act * y[I.FLat]
         calc['react'] = risk_comorb * r_react * y[I.SLat]
         calc['rel_tc'] = risk_comorb * r_rel_tc * y[I.RLow]
         calc['rel_td'] = risk_comorb * r_rel_td * y[I.RHigh]
@@ -38,6 +43,7 @@ class Progression(Process):
         calc['inc_smr'] = calc['act_smr'] + calc['react_smr'] + calc['rel_tc_smr'] + calc['rel_td_smr'] + calc['rel_st_smr']
 
         r_stab = pars['r_stab']
+        calc['stab_fl'] = r_stab * y[I.FLat]
         calc['stab_tc'] = r_stab * y[I.RLow]
         calc['stab_td'] = r_stab * y[I.RHigh]
 
@@ -45,8 +51,8 @@ class Progression(Process):
         calc['sc_s'] = pars['r_sc'] * y[I.Sym]
         calc['sc_c'] = pars['r_sc'] * y[I.ExSym]
 
-        # calc['clear_sl'] = pars['r_clear'] * y[I.SLat]
-        # calc['clear_rst'] = pars['r_clear'] * y[I.RSt]
+        calc['clear_sl'] = pars['r_clear'] * y[I.SLat]
+        calc['clear_rst'] = pars['r_clear'] * y[I.RSt]
 
         r_onset = np.array([
             pars['r_onset_sn'], pars['r_onset_sp'],

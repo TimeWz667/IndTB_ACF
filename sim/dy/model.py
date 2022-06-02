@@ -101,17 +101,22 @@ class Model:
         dy = np.zeros_like(y)
         #
         dy -= calc['infection_ds'] + calc['infection_dr']
+        dy[I.FLat_DS] += calc['infection_ds'].sum()
+        dy[I.FLat_DR] += calc['infection_dr'].sum()
 
-        dy[I.SLat] += calc['lat']
-
+        # Incidence
+        dy[I.FLat] -= calc['act']
         dy[I.SLat] -= calc['react']
         dy[I.RLow] -= calc['rel_tc']
         dy[I.RHigh] -= calc['rel_td']
         dy[I.RSt] -= calc['rel_st']
-        #
+
         dy[I.Asym] += calc['inc_smr']
 
         # Progression
+
+        dy[I.FLat] -= calc['stab_fl']
+        dy[I.SLat] += calc['stab_fl']
         dy[I.RLow] -= calc['stab_tc']
         dy[I.RHigh] -= calc['stab_td']
         dy[I.RSt] += calc['stab_tc'] + calc['stab_td']
@@ -184,11 +189,10 @@ class Model:
         dy[I.Txf_Pub] -= tx_switch_pub
         dy[I.Txs_Pub] += tx_switch_pub
 
-
-        # # Self-clearance
-        # dy[I.SLat] -= calc['clear_sl']
-        # dy[I.RSt] -= calc['clear_rst']
-        # dy[I.U] += (calc['clear_sl'] + calc['clear_rst'])
+        # Self-clearance
+        dy[I.SLat] -= calc['clear_sl']
+        dy[I.RSt] -= calc['clear_rst']
+        dy[I.U] += (calc['clear_sl'] + calc['clear_rst']).sum(0)
 
         # Demography
         dy[I.U, 0] += calc['births']
@@ -292,11 +296,11 @@ if __name__ == '__main__':
     # ms.RR_inf_comorb.plot()
     # ms.RR_inc_comorb.plot()
 
-    ms.Prev.plot()
-    ms.Prev_RiskLo.plot()
-    ms.Prev_RiskHi.plot()
-    ms2.Prev_RiskLo.plot()
-    ms2.Prev_RiskHi.plot()
+    # ms.Prev.plot()
+    # ms.Prev_RiskLo.plot()
+    # ms.Prev_RiskHi.plot()
+    # ms2.Prev_RiskLo.plot()
+    # ms2.Prev_RiskHi.plot()
     # ms.PrPrev_DR.plot()
 
     # ms.IncR.plot()
@@ -313,8 +317,8 @@ if __name__ == '__main__':
     # ms.IncR.plot()
     # ms1.IncR.plot()
     # ms2.IncR.plot()
-    # ms.IncR_DS.plot()
-    # ms.IncR_DR.plot()
+    ms.IncR_DS.plot()
+    ms.IncR_DR.plot()
     # ms.PrDR_Inc.plot()
     # ms.IncR_rural.plot()
     # ms.IncR_urban.plot()

@@ -21,5 +21,4 @@ PCore progression {
     r_die_ut = 0.2
 
     r_clear ~ unif(0.02, 0.04)
-
 }

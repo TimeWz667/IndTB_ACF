@@ -3,7 +3,7 @@ from sim.dy import Model
 
 
 inputs = load_inputs('../data/pars.json')
-m = Model(inputs, year0=2010)
+m = Model(inputs, year0=1970)
 
 
 def fn_post(p, m):

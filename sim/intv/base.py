@@ -45,7 +45,7 @@ class Intervention(BaseModel):
             p_dst = pars[f'p_dst_acf_{type}']
 
             p_dst = p_dst
-            r_acf = r_acf0 * sens * pars['sens_acf_screen']
+            r_acf = r_acf0 * sens #* pars['sens_acf_screen']
             return r_acf0, r_acf, p_dst
 
         if t > self.T0_Intv and self.ACF.Scale > 0:
@@ -60,7 +60,7 @@ class Intervention(BaseModel):
             p_dst = pars[f'p_dst_acf_{type}']
 
             p_dst = wt * p_dst
-            r_acf = wt * sens * pars['sens_acf_screen']
+            r_acf = wt * sens #* pars['sens_acf_screen']
 
         return r_acf0, r_acf, p_dst
 
