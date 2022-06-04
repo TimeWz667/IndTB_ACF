@@ -25,6 +25,7 @@ class ACF(BaseModel):
 class ACFPlain(BaseModel):
     R_ACF: confloat(ge=0) = 0
     Type: str = 'mod'
+    Focus: bool = True
 
 
 class Intervention(BaseModel):
@@ -45,7 +46,15 @@ class Intervention(BaseModel):
             p_dst = pars[f'p_dst_acf_{type}']
 
             p_dst = p_dst
-            r_acf = r_acf0 * sens #* pars['sens_acf_screen']
+            r_acf = r_acf0 * sens
+
+            if np.any(r_acf > 0):
+                if self.ACFPlain.Focus:
+                    r_acf_low = np.zeros((4, 1))
+                else:
+                    r_acf_low = r_acf
+                r_acf = np.concatenate([r_acf_low, r_acf], axis=1)
+
             return r_acf0, r_acf, p_dst
 
         if t > self.T0_Intv and self.ACF.Scale > 0:

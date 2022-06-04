@@ -78,8 +78,8 @@ class Model:
         y0 = np.zeros((I.N_State_TB, I.N_State_Strata))
         n0 = np.array([self.Inputs['N0'], 0])
 
-        y0[I.Sym] = 1e-2 * n0
-        y0[I.SLat] = 0.4 * n0
+        y0[I.Sym_Sp_DS] = 1e-2 * n0
+        y0[I.SLat_DS] = 0.4 * n0
         y0[I.U] = n0 - y0.sum(0)
         return y0
 
@@ -125,11 +125,9 @@ class Model:
         dy[I.ExSym] -= calc['sc_c']
 
         sc_asc = calc['sc_a'] + calc['sc_s'] + calc['sc_c']
-        sc = np.zeros((2, I.N_State_Strata))
-        sc[0] = sc_asc[0] + sc_asc[2]
-        sc[1] = sc_asc[1] + sc_asc[3]
 
-        dy[I.RHigh] += sc[0] + sc[1]
+        dy[I.RHigh_DS] += sc_asc[0] + sc_asc[1]
+        dy[I.RHigh_DR] += sc_asc[2] + sc_asc[3]
 
         # Smear convertion
         con_a, con_s, con_c = calc['convert_a'], calc['convert_s'], calc['convert_c']
@@ -168,6 +166,7 @@ class Model:
         dy[I.Txf_Pub] += acf_1_pub_s + acf_1_pub_c
         dy[I.Txs_Pub] += acf_2_pub_s + acf_2_pub_c
 
+
         # Tx
         tc_1_pub, td_1_pub = calc['tx_succ_txf_pub'], calc['tx_ltfu_txf_pub']
         tc_1_pri, td_1_pri = calc['tx_succ_txf_pri'], calc['tx_ltfu_txf_pri']
@@ -205,7 +204,7 @@ class Model:
         #     ns[ns == 0] = 1e-10
         #     dy -= y / ns * dy.sum(0, keepdims=True)
         # else:
-        #     pass
+        # #     pass
         if t <= self.Year0:
             dy -= y / y.sum() * dy.sum()
 
@@ -273,13 +272,13 @@ if __name__ == '__main__':
     m = Model(inputs, year0=1970)
 
     sc = get_bn()
-    p0 = sample(sc, {'rr_risk_comorb': 20})
+    p0 = sample(sc, {'rr_risk_comorb': 20, 'beta_dr': 0, 'r_mdr_tx': 0})
 
     ys, ms, msg = m.simulate(p0)
     ys = ys.y.T[-1]
     _, ms1, _ = m.simulate_onward(ys, p0)
-    #_, ms2, _ = m.simulate_onward(ys, p0, intv={'ACFPlain': {'R_ACF': 0.2, 'Type': 'mod'}})
-    _, ms2, _ = m.simulate_onward(ys, p0, intv={'ACF': {'Scale': 0.2, 'Type': 'mod'}})
+    _, ms2, _ = m.simulate_onward(ys, p0, intv={'ACFPlain': {'R_ACF': 0.2, 'Type': 'high'}})
+    #_, ms2, _ = m.simulate_onward(ys, p0, intv={'ACF': {'Scale': 0.2, 'Type': 'mod'}})
 
     ms = pd.concat([ms, ms1.iloc[1:]])
 
@@ -324,13 +323,18 @@ if __name__ == '__main__':
     ms.IncR_RiskHi.plot(ax=axes[1, 0])
     ms1.IncR_RiskHi.plot(ax=axes[1, 0])
     ms2.IncR_RiskHi.plot(ax=axes[1, 0])
+
+    # ms.IncR_Remote.plot(ax=axes[1, 0])
+    # ms1.IncR_Remote.plot(ax=axes[1, 0])
+    # ms2.IncR_Remote.plot(ax=axes[1, 0])
+
     # ms.IncR_DS.plot()
     # ms.IncR_DR.plot()
     # ms.PrDR_Inc.plot()
 
 
-    # ms.IncR_DS.plot()
-    # ms.IncR_DR.plot()
+    # ms.IncR_DS.plot(ax=axes[1, 0])
+    # ms.IncR_DR.plot(ax=axes[1, 0])
     # ms1.IncR_DR.plot()
     # ms2.IncR_DR.plot()
 

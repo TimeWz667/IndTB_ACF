@@ -27,9 +27,9 @@ class Progression(Process):
 
         calc['act'] = risk_comorb * r_act * y[I.FLat]
         calc['react'] = risk_comorb * r_react * y[I.SLat]
-        calc['rel_tc'] = risk_comorb * r_rel_tc * y[I.RLow]
-        calc['rel_td'] = risk_comorb * r_rel_td * y[I.RHigh]
-        calc['rel_st'] = risk_comorb * r_rel_st * y[I.RSt]
+        calc['rel_tc'] = r_rel_tc * y[I.RLow]
+        calc['rel_td'] = r_rel_td * y[I.RHigh]
+        calc['rel_st'] = r_rel_st * y[I.RSt]
 
         calc['act_smr'] = sn_sp * np.repeat(calc['act'], 2, axis=0)
         calc['react_smr'] = sn_sp * np.repeat(calc['react'], 2, axis=0)
@@ -79,6 +79,8 @@ class Progression(Process):
         inc = calc['inc']
 
         mea['IncR'] = inc.sum() / n
+        mea['IncR_Recent'] = calc['inc_recent'].sum() / n
+        mea['IncR_Remote'] = calc['inc_remote'].sum() / n
         mea['Recent'] = calc['inc_recent'].sum() / max(inc.sum(), 1e-10)
         mea['IncR_DR'] = inc[1].sum() / n
         mea['IncR_DS'] = inc[0].sum() / n

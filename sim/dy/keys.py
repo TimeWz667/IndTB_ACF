@@ -17,34 +17,6 @@ ExSym_Sp_DS = 10
 ExSym_Sn_DR = 11
 ExSym_Sp_DR = 12
 
-# # PCF
-# Pub_Sn_DS = 13
-# Pub_Sp_DS = 14
-# Pub_Sn_DR = 15
-# Pub_Sp_DR = 16
-#
-# Pri_Sn_DS = 17
-# Pri_Sp_DS = 18
-# Pri_Sn_DR = 19
-# Pri_Sp_DR = 20
-#
-# # ACF
-# ACFS_Asym_Sn_DS = 21
-# ACFS_Asym_Sp_DS = 22
-# ACFS_Asym_Sn_DR = 23
-# ACFS_Asym_Sp_DR = 24
-#
-#
-# ACFS_Sym_Sn_DS = 25
-# ACFS_Sym_Sp_DS = 26
-# ACFS_Sym_Sn_DR = 27
-# ACFS_Sym_Sp_DR = 28
-#
-# ACFC_Sym_Sn_DS = 29
-# ACFC_Sym_Sp_DS = 30
-# ACFC_Sym_Sn_DR = 31
-# ACFC_Sym_Sp_DR = 32
-
 # Tx
 Txf_Pub_Sn_DS = 13
 Txf_Pub_Sp_DS = 14

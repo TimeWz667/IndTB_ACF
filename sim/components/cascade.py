@@ -60,8 +60,6 @@ class Cascade(Process):
         if t > self.Intervention.T0_Intv:
             r_acf, r_acf_det, p_dst = self.Intervention.modify_acf(t, r_acf, r_acf_det, p_dst, pars)
 
-            if np.any(r_acf_det > 0):
-                r_acf_det = np.concatenate([np.zeros((4, 1)), r_acf_det], axis=1)
 
         p_dst_acf = np.array([0, 0, p_dst, p_dst]).reshape((-1, 1))
 
