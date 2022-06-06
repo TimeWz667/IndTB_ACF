@@ -3,8 +3,7 @@ import numpy as np
 
 ds = [d for d in os.listdir("../out") if d.startswith('dy_sc')]
 
-for path in ds:
-    print(ds)
+print(ds)
 
 intvs = dict()
 

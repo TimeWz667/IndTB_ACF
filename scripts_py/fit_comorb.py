@@ -20,18 +20,15 @@ if __name__ == '__main__':
     import pandas as pd
     import pickle as pkl
 
-    smc = ApproxBayesComSMC(max_round=40, n_collect=300, n_core=4, verbose=8)
-
-    # for or_comorb in [1]:
-    #     for pr in [0.5, 0.1]:
+    smc = ApproxBayesComSMC(max_round=60, n_collect=300, n_core=5, verbose=8)
 
     scs = [
         (4.3, 0.1785, 'sc1-1'),
-        (6.61, 0.007, 'sc2-2'),
         (2.91, 0.1785, 'sc1-2'),
         (2.38, 0.1785, 'sc1-3'),
         (34.7, 0.007, 'sc2-1'),
-        (4,92, 0.007, 'sc2-3'),
+        (6.61, 0.007, 'sc2-2'),
+        (4.92, 0.007, 'sc2-3'),
     ]
 
     for or_comorb, pr, title in scs:
@@ -68,7 +65,7 @@ if __name__ == '__main__':
         mss = [ms for _, ms, _ in rss]
         pss = [ps for _, _, ps in rss]
 
-        mss = bind_results(mss)
+        mss = bind_results(mss, or_comorb=or_comorb, pr_tb=pr)
         mss.to_csv(f'{out_path}/Runs_Post.csv')
 
         pd.DataFrame(pss).to_csv(f'{out_path}/Post_full.csv')
