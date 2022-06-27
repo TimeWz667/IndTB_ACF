@@ -28,6 +28,13 @@ class ACFPlain(BaseModel):
     Focus: bool = True
 
 
+class ACF(BaseModel):
+    Yield: confloat(ge=0, le=200) = 0
+    Type: str = 'mod'
+    Asym: bool = False
+    HiRisk: bool = False
+
+
 class Intervention(BaseModel):
     ACF: ACF = ACF()
     ACFPlain: ACFPlain = ACFPlain()

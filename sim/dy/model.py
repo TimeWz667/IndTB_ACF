@@ -85,7 +85,6 @@ class Model:
 
     def collect_calc(self, t, y, pars):
         #t = max(t, self.Year0)
-
         calc = dict()
         self.Demography(t, y, pars, calc)
         self.Transmission(t, y, pars, calc)
@@ -99,7 +98,7 @@ class Model:
         calc = self.collect_calc(t, y, pars)
 
         dy = np.zeros_like(y)
-        #
+        # Infection
         dy -= calc['infection_ds'] + calc['infection_dr']
         dy[I.FLat_DS] += calc['infection_ds'].sum(0)
         dy[I.FLat_DR] += calc['infection_dr'].sum(0)
@@ -129,7 +128,7 @@ class Model:
         dy[I.RHigh_DS] += sc_asc[0] + sc_asc[1]
         dy[I.RHigh_DR] += sc_asc[2] + sc_asc[3]
 
-        # Smear convertion
+        # Smear conversion
         con_a, con_s, con_c = calc['convert_a'], calc['convert_s'], calc['convert_c']
         dy[I.Asym_Sn] -= con_a
         dy[I.Asym_Sp] += con_a
@@ -166,7 +165,6 @@ class Model:
         dy[I.Txf_Pub] += acf_1_pub_s + acf_1_pub_c
         dy[I.Txs_Pub] += acf_2_pub_s + acf_2_pub_c
 
-
         # Tx
         tc_1_pub, td_1_pub = calc['tx_succ_txf_pub'], calc['tx_ltfu_txf_pub']
         tc_1_pri, td_1_pri = calc['tx_succ_txf_pri'], calc['tx_ltfu_txf_pri']
@@ -198,15 +196,6 @@ class Model:
 
         dy[:, 0] -= calc['prog_comorb']
         dy[:, 1] += calc['prog_comorb']
-
-        # if t <= self.Year0:
-        #     ns = y.sum(0, keepdims=True)
-        #     ns[ns == 0] = 1e-10
-        #     dy -= y / ns * dy.sum(0, keepdims=True)
-        # else:
-        # #     pass
-        # if t <= self.Year0:
-        #     dy -= y / y.sum() * dy.sum()
 
         return dy.reshape(-1)
 
