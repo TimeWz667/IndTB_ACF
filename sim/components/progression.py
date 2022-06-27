@@ -113,7 +113,7 @@ class Progression(Process):
 
         mea['RR_inc_comorb'] = mea['IncR_RiskHi'] / max(mea['IncR_RiskLo'], 1e-10)
         p1, p0 = mea['Prev_RiskHi'], mea['Prev_RiskLo']
-        if p1 <=0 or p0 <= 0:
+        if p1 <= 0 or p0 <= 0:
             mea['OR_prev_comorb'] = 0
         else:
             mea['OR_prev_comorb'] = (p1 / (1 - p1)) / (p0 / (1 - p0))

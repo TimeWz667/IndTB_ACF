@@ -10,7 +10,7 @@ class Demography(Process):
         I = self.Keys
 
         dr = np.ones_like(y) * pars['r_die']
-        gr = pars['r_growth']
+        gr = pars['r_growth'] if t > 1970 else 0
 
         dr_tb = np.zeros_like(y)
         dr_tb[I.Asym] = pars['r_die_ut']
@@ -24,13 +24,15 @@ class Demography(Process):
         calc['dr'] = dr
         calc['dr_tb'] = dr_tb
         calc['gr'] = gr
-        calc['births'] = gr * n.sum() + (calc['deaths'] + calc['deaths_tb']).sum()
 
-        r_die_crude = (calc['deaths'] + calc['deaths_tb']).sum() / n.sum()
+        calc['births'] = (calc['deaths'] + calc['deaths_tb']).sum() + gr * n.sum()
+
+        r_die_crude = (calc['deaths'][:, 1].sum() + calc['deaths_tb'][:, 1].sum()) / y[:, 1].sum()
+
         if t > 1970:
             r_comorb = (pars['p_comorb'] / (1 - pars['p_comorb'])) * (gr + r_die_crude)
         else:
-            r_comorb = (pars['p_comorb'] / (1 - pars['p_comorb'])) * (gr + r_die_crude)
+            r_comorb = (pars['p_comorb'] / (1 - pars['p_comorb'])) * r_die_crude
         calc['prog_comorb'] = r_comorb * y[:, 0]
 
     def measure(self, t, y, pars, calc, mea):

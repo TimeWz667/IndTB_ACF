@@ -76,7 +76,7 @@ class Model:
 
     def get_y0(self, pars):
         y0 = np.zeros((I.N_State_TB, I.N_State_Strata))
-        n0 = np.array([self.Inputs['N0'], 0])
+        n0 = self.Inputs['N0'] * np.array([0.95, 0.05])
 
         y0[I.Sym_Sp_DS] = 1e-2 * n0
         y0[I.SLat_DS] = 0.4 * n0
@@ -205,8 +205,8 @@ class Model:
         #     dy -= y / ns * dy.sum(0, keepdims=True)
         # else:
         # #     pass
-        if t <= self.Year0:
-            dy -= y / y.sum() * dy.sum()
+        # if t <= self.Year0:
+        #     dy -= y / y.sum() * dy.sum()
 
         return dy.reshape(-1)
 
@@ -284,12 +284,12 @@ if __name__ == '__main__':
 
     fig, axes = plt.subplots(2, 2)
 
-    ms = ms[ms.index > 2000]
-    ms.Pop.plot(ax=axes[0, 0])
-    ms.Pop_RiskLo.plot(ax=axes[0, 0])
-    ms.Pop_RiskHi.plot(ax=axes[0, 0])
+    # ms = ms[ms.index > 2000]
+    # ms.Pop.plot(ax=axes[0, 0])
+    # ms.Pop_RiskLo.plot(ax=axes[0, 0])
+    # ms.Pop_RiskHi.plot(ax=axes[0, 0])
 
-    # ms.PropComorb.plot()
+    ms.PropComorb.plot(ax=axes[0, 0])
 
     ms.LTBI.plot(ax=axes[0, 1])
     ms.LTBI_RiskLo.plot(ax=axes[0, 1])

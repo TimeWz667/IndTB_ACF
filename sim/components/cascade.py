@@ -60,7 +60,6 @@ class Cascade(Process):
         if t > self.Intervention.T0_Intv:
             r_acf, r_acf_det, p_dst = self.Intervention.modify_acf(t, r_acf, r_acf_det, p_dst, pars)
 
-
         p_dst_acf = np.array([0, 0, p_dst, p_dst]).reshape((-1, 1))
 
         calc['acf_s'] = r_acf * y[I.Sym]
