@@ -9,10 +9,10 @@ intvs = dict()
 
 intvs['Baseline'] = {}
 
-for r_acf in np.linspace(0.5, 3, 6):
-    intvs[f'High, Universal, R_ACF={r_acf:.2f}'] = {'ACFPlain': {'Type': 'high', 'R_ACF': r_acf, 'Focus': False}}
+for r_acf in np.linspace(0, 2, 9):
+    # intvs[f'High, Universal, R_ACF={r_acf:.2f}'] = {'ACFPlain': {'Type': 'high', 'R_ACF': r_acf, 'Focus': False}}
     intvs[f'High, Focus, R_ACF={r_acf:.2f}'] = {'ACFPlain': {'Type': 'high', 'R_ACF': r_acf, 'Focus': True}}
-    #intvs[f'Mod, R_ACF={r_acf:.2f}'] = {'ACFPlain': {'Type': 'mod', 'R_ACF': r_acf}}
+    #intvs[f'Mod, Focus, R_ACF={r_acf:.2f}'] = {'ACFPlain': {'Type': 'mod', 'R_ACF': r_acf, 'Focus': True}}
 
 
 def fn_post(y0, m, intv):

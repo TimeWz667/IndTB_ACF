@@ -65,10 +65,12 @@ class Model:
         pars['trans_ds'] = trans = np.zeros((I.N_State_TB, I.N_State_Strata))
         trans[I.Infectious_Sn_DS] = pars['rr_inf_sn']
         trans[I.Infectious_Sp_DS] = 1
+        trans[I.Asym] *= pars['rr_inf_asym']
 
         pars['trans_dr'] = trans = np.zeros((I.N_State_TB, I.N_State_Strata))
         trans[I.Infectious_Sn_DR] = pars['rr_inf_sn']
         trans[I.Infectious_Sp_DR] = 1
+        trans[I.Asym] *= pars['rr_inf_asym']
 
         pars['mixing'] = np.ones((I.N_State_Strata, I.N_State_Strata))
 
@@ -76,7 +78,7 @@ class Model:
 
     def get_y0(self, pars):
         y0 = np.zeros((I.N_State_TB, I.N_State_Strata))
-        n0 = self.Inputs['N0'] * np.array([0.95, 0.05])
+        n0 = np.array([self.Inputs['N0'], 0])
 
         y0[I.Sym_Sp_DS] = 1e-2 * n0
         y0[I.SLat_DS] = 0.4 * n0
@@ -98,6 +100,7 @@ class Model:
         calc = self.collect_calc(t, y, pars)
 
         dy = np.zeros_like(y)
+
         # Infection
         dy -= calc['infection_ds'] + calc['infection_dr']
         dy[I.FLat_DS] += calc['infection_ds'].sum(0)
@@ -118,7 +121,7 @@ class Model:
         dy[I.RLow] -= calc['stab_tc']
         dy[I.RHigh] -= calc['stab_td']
         dy[I.RSt] += calc['stab_tc'] + calc['stab_td']
-        #
+
         dy[I.Asym] -= calc['sc_a'] + calc['sym_onset']
         dy[I.Sym] += calc['sym_onset'] - calc['sc_s']
         dy[I.ExSym] -= calc['sc_c']
@@ -128,7 +131,7 @@ class Model:
         dy[I.RHigh_DS] += sc_asc[0] + sc_asc[1]
         dy[I.RHigh_DR] += sc_asc[2] + sc_asc[3]
 
-        # Smear conversion
+        # Smear convertion
         con_a, con_s, con_c = calc['convert_a'], calc['convert_s'], calc['convert_c']
         dy[I.Asym_Sn] -= con_a
         dy[I.Asym_Sp] += con_a
@@ -165,6 +168,7 @@ class Model:
         dy[I.Txf_Pub] += acf_1_pub_s + acf_1_pub_c
         dy[I.Txs_Pub] += acf_2_pub_s + acf_2_pub_c
 
+
         # Tx
         tc_1_pub, td_1_pub = calc['tx_succ_txf_pub'], calc['tx_ltfu_txf_pub']
         tc_1_pri, td_1_pri = calc['tx_succ_txf_pri'], calc['tx_ltfu_txf_pri']
@@ -196,6 +200,15 @@ class Model:
 
         dy[:, 0] -= calc['prog_comorb']
         dy[:, 1] += calc['prog_comorb']
+
+        # if t <= self.Year0:
+        #     ns = y.sum(0, keepdims=True)
+        #     ns[ns == 0] = 1e-10
+        #     dy -= y / ns * dy.sum(0, keepdims=True)
+        # else:
+        # #     pass
+        if t <= self.Year0:
+            dy -= y / y.sum() * dy.sum()
 
         return dy.reshape(-1)
 
@@ -273,12 +286,12 @@ if __name__ == '__main__':
 
     fig, axes = plt.subplots(2, 2)
 
-    # ms = ms[ms.index > 2000]
-    # ms.Pop.plot(ax=axes[0, 0])
-    # ms.Pop_RiskLo.plot(ax=axes[0, 0])
-    # ms.Pop_RiskHi.plot(ax=axes[0, 0])
+    ms = ms[ms.index > 2000]
+    ms.Pop.plot(ax=axes[0, 0])
+    ms.Pop_RiskLo.plot(ax=axes[0, 0])
+    ms.Pop_RiskHi.plot(ax=axes[0, 0])
 
-    ms.PropComorb.plot(ax=axes[0, 0])
+    # ms.PropComorb.plot()
 
     ms.LTBI.plot(ax=axes[0, 1])
     ms.LTBI_RiskLo.plot(ax=axes[0, 1])

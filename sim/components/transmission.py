@@ -34,15 +34,18 @@ def infection_no_mixing(sus, trans, y):
 
 class Transmission(Process):
     def __call__(self, t, y, pars, calc):
-        # y0_decline, y0_baseline = pars['y0_decline'], pars['y0_baseline']
-        #
-        # adr = pars['adr'] + pars['adr_adj']
-        #
-        # if t < y0_decline:
-        #     t = y0_decline
-        #
-        # adj = np.exp(-adr * (t - y0_baseline))
+        I = self.Keys
+
+        y0_decline, y0_baseline = pars['y0_decline'], pars['y0_baseline']
+
+        adr = pars['adr'] + pars['adr_adj']
+
+        if t < y0_decline:
+            t = y0_decline
+
+        adj = np.exp(-adr * (t - y0_baseline))
         adj = 1
+
         calc['infection_ds'] = infection_no_mixing(
             sus=pars['sus'],
             trans=pars['trans_ds'],

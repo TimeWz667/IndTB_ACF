@@ -2,6 +2,7 @@ PCore transmission {
     beta_ds ~ unif(1, 15)
     beta_dr ~ unif(3, 6.26)
 
+    rr_inf_asym ~ unif(0, 1)
     rr_inf_sn ~ unif(0.1, 0.3)
 
     red_sus ~ unif(0.15, 0.25)
