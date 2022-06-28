@@ -78,7 +78,8 @@ class Model:
 
     def get_y0(self, pars):
         y0 = np.zeros((I.N_State_TB, I.N_State_Strata))
-        n0 = np.array([self.Inputs['N0'], 0])
+        p_hi = pars['p_comorb']
+        n0 = np.array([1 - p_hi, p_hi]) * self.Inputs['N0']
 
         y0[I.Sym_Sp_DS] = 1e-2 * n0
         y0[I.SLat_DS] = 0.4 * n0

@@ -27,12 +27,12 @@ class ACFPlain(BaseModel):
     Type: str = 'mod'
     Focus: bool = True
 
-
-class ACF(BaseModel):
-    Yield: confloat(ge=0, le=200) = 0
-    Type: str = 'mod'
-    Asym: bool = False
-    HiRisk: bool = False
+#
+# class ACF(BaseModel):
+#     Yield: confloat(ge=0, le=200) = 0
+#     Type: str = 'mod'
+#     Asym: bool = False
+#     HiRisk: bool = False
 
 
 class Intervention(BaseModel):
