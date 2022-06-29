@@ -275,7 +275,7 @@ if __name__ == '__main__':
     m = Model(inputs, year0=1970)
 
     sc = get_bn()
-    p0 = sample(sc, {'rr_risk_comorb': 20, 'beta_dr': 0, 'r_mdr_tx': 0})
+    p0 = sample(sc, {'beta_ds': 11, 'rr_risk_comorb': 20, 'rr_beta_dr': 1.02})
 
     ys, ms, msg = m.simulate(p0)
     ys = ys.y.T[-1]
@@ -306,7 +306,7 @@ if __name__ == '__main__':
     # ms.Prev_RiskHi.plot()
     # ms2.Prev_RiskLo.plot()
     # ms2.Prev_RiskHi.plot()
-    # ms.PrPrev_DR.plot()
+    ms.PrDR_Inc.plot(ax=axes[1, 0])
 
     # ms.IncR.plot()
     # ms.Prev.plot()
@@ -323,9 +323,9 @@ if __name__ == '__main__':
     # ms.PrSp_Sym.plot()
     # ms.PrSym.plot()
     # ms.PrDR_Inc.plot()
-    ms.IncR_RiskHi.plot(ax=axes[1, 0])
-    ms1.IncR_RiskHi.plot(ax=axes[1, 0])
-    ms2.IncR_RiskHi.plot(ax=axes[1, 0])
+    # ms.IncR_RiskHi.plot(ax=axes[1, 0])
+    # ms1.IncR_RiskHi.plot(ax=axes[1, 0])
+    # ms2.IncR_RiskHi.plot(ax=axes[1, 0])
 
     # ms.IncR_Remote.plot(ax=axes[1, 0])
     # ms1.IncR_Remote.plot(ax=axes[1, 0])
