@@ -19,13 +19,13 @@ sims <- read_csv(here::here("out", "dy", "Runs_Post.csv")) %>%
 
 sims %>% 
   filter(Year > 2000) %>% 
-  select(Year, MorR, IncR, Prev, ARTI, PrSym) %>% 
+  select(Year, MorR, IncR, Prev, ARTI, PrSym, PrDR_Inc) %>% 
   pivot_longer(-Year, names_to = "Index") %>% 
   group_by(Year, Index) %>% 
   summarise(
     M = median(value), 
-    L = quantile(value, 0.025),
-    U = quantile(value, 0.975)
+    L = quantile(value, 0.25),
+    U = quantile(value, 0.75)
   ) %>% 
   ggplot() + 
   geom_ribbon(aes(x = Year, ymin = L, ymax = U, fill = "Simulation"), alpha = 0.4) +

@@ -1,6 +1,6 @@
 PCore transmission {
     beta_ds ~ unif(1, 15)
-    rr_beta_dr ~ unif(0.9, 1)
+    rr_beta_dr ~ unif(0.9, 1.1)
     beta_dr = beta_ds * rr_beta_dr
 
     rr_inf_asym ~ unif(0, 1)
