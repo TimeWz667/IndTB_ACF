@@ -246,7 +246,18 @@ class Model:
         msg['pars'] = p0
         return ys, ms, msg
 
-    def simulate_onward(self, y0, p, intv=None, t_end=2030, dt=0.5):
+    def form_non_tb_population(self, t0, y0, pars, ppv0, spec):
+        calc = dict()
+        self.Cascade(t0, y0.reshape((I.N_State_TB, 2)), pars, calc)
+        tp = calc['det_txf_pub_s'] + calc['det_txf_pub_c'] + calc['det_txs_pub_s'] + calc['det_txs_pub_c']
+        tp += calc['det_txf_pri_s'] + calc['det_txf_pri_c']
+        tp = tp.sum()
+        fp = tp * (1 - ppv0) / ppv0
+
+        pars['NonTB'] = fp / (pars['r_cs_s'] * (1 - 0.99)) / y0.sum()
+        pars['spec0'] = spec
+
+    def simulate_onward(self, y0, p, intv=None, t_end=2030, dt=0.5, ppv0=0.85, spec=0.99):
         if intv is None:
             intv = self.Intervention
 
@@ -254,6 +265,8 @@ class Model:
         p0 = p
         if 'sus' not in p:
             p = self.update_parameters(p)
+        if 'NonTB' not in p:
+            self.form_non_tb_population(t_start, y0, p, ppv0, spec)
 
         n_ts = int((t_end - t_start) / dt) + 1
         ys, ms, msg = update_intv(self, y0, pars=p,
@@ -280,12 +293,12 @@ if __name__ == '__main__':
     ys, ms, msg = m.simulate(p0)
     ys = ys.y.T[-1]
     _, ms1, _ = m.simulate_onward(ys, p0)
-    _, ms2, _ = m.simulate_onward(ys, p0, intv={'ACFPlain': {'R_ACF': 0.2, 'Type': 'high'}})
-    #_, ms2, _ = m.simulate_onward(ys, p0, intv={'ACF': {'Scale': 0.2, 'Type': 'mod'}})
+    _, ms2, _ = m.simulate_onward(ys, p0, intv={'ACF': {'Yield': 20, 'Type': 'high', 'HiRisk': False}})
+    _, ms3, _ = m.simulate_onward(ys, p0, intv={'ACF': {'Yield': 20, 'Type': 'high', 'HiRisk': True}})
 
     ms = pd.concat([ms, ms1.iloc[1:]])
 
-    fig, axes = plt.subplots(2, 2)
+    fig, axes = plt.subplots(2, 3)
 
     ms = ms[ms.index > 2000]
     ms.Pop.plot(ax=axes[0, 0])
@@ -298,6 +311,14 @@ if __name__ == '__main__':
     ms.LTBI_RiskLo.plot(ax=axes[0, 1])
     ms.LTBI_RiskHi.plot(ax=axes[0, 1])
 
+    ms.IncR.plot(ax=axes[0, 2])
+    ms2.IncR.plot(ax=axes[0, 2])
+    ms3.IncR.plot(ax=axes[0, 2])
+
+    ms.R_ACF_Reached.plot(ax=axes[1, 2])
+    ms2.R_ACF_Reached.plot(ax=axes[1, 2])
+    ms3.R_ACF_Reached.plot(ax=axes[1, 2])
+
     # ms.RR_inf_comorb.plot()
     # ms.RR_inc_comorb.plot()
 
@@ -306,7 +327,10 @@ if __name__ == '__main__':
     # ms.Prev_RiskHi.plot()
     # ms2.Prev_RiskLo.plot()
     # ms2.Prev_RiskHi.plot()
-    ms.PrDR_Inc.plot(ax=axes[1, 0])
+    # ms.PrDR_Inc.plot(ax=axes[1, 0])
+    ms.PPV_ACF.plot(ax=axes[1, 0])
+    ms2.PPV_ACF.plot(ax=axes[1, 0])
+    ms3.PPV_ACF.plot(ax=axes[1, 0])
 
     # ms.IncR.plot()
     # ms.Prev.plot()
@@ -315,9 +339,9 @@ if __name__ == '__main__':
     # ms1.CNR_RiskLo.plot(ax=axes[1, 1])
     # ms2.CNR_RiskLo.plot(ax=axes[1, 1])
 
-    ms.CNR.plot(ax=axes[1, 1])
-    ms1.CNR.plot(ax=axes[1, 1])
-    ms2.CNR.plot(ax=axes[1, 1])
+    ms.TP.plot(ax=axes[1, 1])
+    ms1.TP.plot(ax=axes[1, 1])
+    ms2.TP.plot(ax=axes[1, 1])
 
     # ms.PrSp_Asym.plot()
     # ms.PrSp_Sym.plot()
@@ -335,7 +359,6 @@ if __name__ == '__main__':
     # ms.IncR_DR.plot()
     # ms.PrDR_Inc.plot()
 
-
     # ms.IncR_DS.plot(ax=axes[1, 0])
     # ms.IncR_DR.plot(ax=axes[1, 0])
     # ms1.IncR_DR.plot()
@@ -343,3 +366,5 @@ if __name__ == '__main__':
 
     plt.legend()
     plt.show()
+
+    print(ms3)

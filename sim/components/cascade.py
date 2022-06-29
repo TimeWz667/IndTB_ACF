@@ -56,19 +56,28 @@ class Cascade(Process):
 
         # ACF
 
-        r_acf, r_acf_det, p_dst = 0, 0, 0
+        r_acf, r_acf_tp, r_acf_fp, p_dst = 0, 0, 0, 0
+        n_nontb = pars['NonTB'] * y.sum(0) if 'NonTB' in pars else 0
+        n_tb = y[I.Sym].sum(0) + y[I.ExSym].sum(0)
+        n = y.sum()
         if t > self.Intervention.T0_Intv:
-            r_acf, r_acf_det, p_dst = self.Intervention.modify_acf(t, r_acf, r_acf_det, p_dst, pars)
+            r_acf, r_acf_tp, r_acf_fp, p_dst = \
+                self.Intervention.modify_acf(t, r_acf, r_acf_tp, r_acf_fp, p_dst, pars, n_tb / n, n_nontb / n)
 
         p_dst_acf = np.array([0, 0, p_dst, p_dst]).reshape((-1, 1))
 
         calc['acf_s'] = r_acf * y[I.Sym]
         calc['acf_c'] = r_acf * y[I.ExSym]
 
-        calc['acf_txf_pub_s'] = r_acf_det * (1 - p_dst_acf) * y[I.Sym]
-        calc['acf_txf_pub_c'] = r_acf_det * (1 - p_dst_acf) * y[I.ExSym]
-        calc['acf_txs_pub_s'] = r_acf_det * p_dst_acf * y[I.Sym]
-        calc['acf_txs_pub_c'] = r_acf_det * p_dst_acf * y[I.ExSym]
+        calc['acf_txf_pub_s'] = r_acf_tp * (1 - p_dst_acf) * y[I.Sym]
+        calc['acf_txf_pub_c'] = r_acf_tp * (1 - p_dst_acf) * y[I.ExSym]
+        calc['acf_txs_pub_s'] = r_acf_tp * p_dst_acf * y[I.Sym]
+        calc['acf_txs_pub_c'] = r_acf_tp * p_dst_acf * y[I.ExSym]
+
+        # ACF non-TB population
+        n_nontb = pars['NonTB'] * y.sum(0, keepdims=True) if 'NonTB' in pars else np.zeros(2)
+        calc['acf_nontb'] = n_nontb * r_acf
+        calc['acf_tx_fp'] = n_nontb * r_acf_fp
 
         # Tx
         r_succ_txf_pub, r_succ_txf_pri = pars['r_succ_txf_pub'], pars['r_succ_txf_pri']
@@ -113,21 +122,38 @@ class Cascade(Process):
 
         det = det_pub + det_pri + det_acf
 
-        mea['CNR'] = det.sum() / n
-        mea['CNR_Pub'] = det_pub.sum() / n
-        mea['CNR_Pri'] = det_pri.sum() / n
-        mea['CNR_Acf'] = det_acf.sum() / n
-        mea['CNR_DS'] = det[2:].sum() / n
-        mea['CNR_DR'] = det[:2].sum() / n
+        if 'NonTB' in pars:
+            n_nontb = pars['NonTB'] * n
+            fp = n_nontb * pars['r_cs_s'] * (1 - pars['spec0'])
+        else:
+            fp = 0
+
+        tp = det.sum()
+        mea['TP'] = det.sum() / n
+        mea['TP_Pub'] = det_pub.sum() / n
+        mea['TP_Pri'] = det_pri.sum() / n
+        mea['TP_Acf'] = det_acf.sum() / n
+        mea['TP_DS'] = det[2:].sum() / n
+        mea['TP_DR'] = det[:2].sum() / n
+
+        fp_acf = calc['acf_tx_fp']
+
+        mea['FP_PCF'] = fp / n
+        mea['FP_ACF'] = fp_acf / n
+        mea['PPV'] = tp / (fp + tp + 1e-10)
+        mea['PPV_ACF'] = det_acf.sum() / (fp_acf.sum() + det_acf.sum() + 1e-10)
 
         for i, strata in enumerate(I.Tag_Strata):
             n = max(ns[i], 1e-15)
-            mea[f'CNR_{strata}'] = det[:, i].sum() / n
-            mea[f'CNR_DS_{strata}'] = det[2:, i].sum() / n
-            mea[f'CNR_DR_{strata}'] = det[:2, i].sum() / n
-            mea[f'CNR_Acf_{strata}'] = det_acf[:, i].sum() / n
+            mea[f'TP_{strata}'] = det[:, i].sum() / n
+            mea[f'TP_DS_{strata}'] = det[2:, i].sum() / n
+            mea[f'TP_DR_{strata}'] = det[:2, i].sum() / n
+            mea[f'TP_ACF_{strata}'] = det_acf[:, i].sum() / n
 
         mea['N_Pub_Detected'] = det_pub.sum()
         mea['N_Pri_Detected'] = det_pri.sum()
         mea['N_ACF_Detected'] = det_acf.sum()
-        mea['N_ACF_Reached'] = (calc['acf_s'] + calc['acf_c']).sum()
+        mea['N_ACF_TB_Reached'] = (calc['acf_s'] + calc['acf_c']).sum()
+        mea['N_ACF_NonTB_Reached'] = np.array(calc['acf_nontb']).sum()
+        mea['N_ACF_Reached'] = mea['N_ACF_TB_Reached'] + mea['N_ACF_NonTB_Reached']
+        mea['R_ACF_Reached'] = mea['N_ACF_Reached'] / n
