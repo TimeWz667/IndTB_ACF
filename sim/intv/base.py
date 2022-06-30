@@ -29,7 +29,7 @@ def scale_up(t, t0, t1):
 
 
 class ACF(BaseModel):
-    Yield: confloat(ge=0, le=200) = 0
+    Yield: confloat(ge=0, le=2) = 0
     Type: str = 'mod'
     HiRisk: bool = False
 
@@ -43,7 +43,7 @@ class Intervention(BaseModel):
     def modify_acf(self, t, r_acf, r_acf_tp, r_acf_fp, p_dst, pars, p_tb, p_nontb):
         if t > self.T0_Intv and self.ACF.Yield > 0:
             wt = scale_up(t, self.T0_Intv, self.T1_Intv)
-            n2detect = self.ACF.Yield * 1e-5 * wt
+            n2detect = self.ACF.Yield * wt
 
             if self.ACF.HiRisk:
                 detectable = p_tb[1] + p_nontb[1]
@@ -51,6 +51,8 @@ class Intervention(BaseModel):
             else:
                 detectable = p_tb.sum() + p_nontb.sum()
                 r_acf = n2detect / detectable * np.ones(2)
+
+            r_acf[r_acf > 5] = 5
             r_acf = r_acf.reshape((1, -1))
 
             type = self.ACF.Type

@@ -143,13 +143,6 @@ class Cascade(Process):
         mea['PPV'] = tp / (fp + tp + 1e-10)
         mea['PPV_ACF'] = det_acf.sum() / (fp_acf.sum() + det_acf.sum() + 1e-10)
 
-        for i, strata in enumerate(I.Tag_Strata):
-            n = max(ns[i], 1e-15)
-            mea[f'TP_{strata}'] = det[:, i].sum() / n
-            mea[f'TP_DS_{strata}'] = det[2:, i].sum() / n
-            mea[f'TP_DR_{strata}'] = det[:2, i].sum() / n
-            mea[f'TP_ACF_{strata}'] = det_acf[:, i].sum() / n
-
         mea['N_Pub_Detected'] = det_pub.sum()
         mea['N_Pri_Detected'] = det_pri.sum()
         mea['N_ACF_Detected'] = det_acf.sum()
@@ -157,3 +150,12 @@ class Cascade(Process):
         mea['N_ACF_NonTB_Reached'] = np.array(calc['acf_nontb']).sum()
         mea['N_ACF_Reached'] = mea['N_ACF_TB_Reached'] + mea['N_ACF_NonTB_Reached']
         mea['R_ACF_Reached'] = mea['N_ACF_Reached'] / n
+
+        for i, strata in enumerate(I.Tag_Strata):
+            n = max(ns[i], 1e-15)
+            mea[f'TP_{strata}'] = det[:, i].sum() / n
+            mea[f'TP_DS_{strata}'] = det[2:, i].sum() / n
+            mea[f'TP_DR_{strata}'] = det[:2, i].sum() / n
+            mea[f'TP_ACF_{strata}'] = det_acf[:, i].sum() / n
+
+

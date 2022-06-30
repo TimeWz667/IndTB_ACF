@@ -293,8 +293,8 @@ if __name__ == '__main__':
     ys, ms, msg = m.simulate(p0)
     ys = ys.y.T[-1]
     _, ms1, _ = m.simulate_onward(ys, p0)
-    _, ms2, _ = m.simulate_onward(ys, p0, intv={'ACF': {'Yield': 20, 'Type': 'high', 'HiRisk': False}})
-    _, ms3, _ = m.simulate_onward(ys, p0, intv={'ACF': {'Yield': 20, 'Type': 'high', 'HiRisk': True}})
+    _, ms2, _ = m.simulate_onward(ys, p0, intv={'ACF': {'Yield': 1, 'Type': 'high', 'HiRisk': False}})
+    _, ms3, _ = m.simulate_onward(ys, p0, intv={'ACF': {'Yield': 1, 'Type': 'high', 'HiRisk': True}})
 
     ms = pd.concat([ms, ms1.iloc[1:]])
 
