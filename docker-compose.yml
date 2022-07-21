@@ -8,5 +8,5 @@ services:
         - D:\Projects\IndiaTB\IndTB_ACF\out:/home/jovyan/work/out
         - D:\Projects\IndiaTB\IndTB_ACF\sim:/home/jovyan/work/sim
       ports:
-        - 8787:8888
+        - 8787:8787
       container_name:   acf

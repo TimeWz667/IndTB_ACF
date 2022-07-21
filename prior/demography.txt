@@ -1,5 +1,5 @@
 PCore Demography {
-    r_die = 1 / 66
+    r_die = 1 / 70
     r_growth = 0.0175
 
     p_comorb ~ unif(0, 0.5)

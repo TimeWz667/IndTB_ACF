@@ -20,7 +20,7 @@ if __name__ == '__main__':
     import pandas as pd
     import pickle as pkl
 
-    smc = ApproxBayesComSMC(max_round=30, n_collect=300, n_core=5, verbose=8)
+    smc = ApproxBayesComSMC(max_round=40, n_collect=1000, n_core=5, verbose=8)
 
     out_path = f'../out/dy'
     os.makedirs(out_path, exist_ok=True)
