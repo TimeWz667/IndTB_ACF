@@ -45,9 +45,9 @@ if __name__ == '__main__':
         for scenario, intv in intvs.items():
             print(scenario)
             with Parallel(n_jobs=3, verbose=8) as parallel:
-                mss0 = parallel(delayed(fn_post)(y0, m, intv) for y0 in y0s)
+                mss0 = parallel(delayed(fn_post)(y0, m, intv) for y0 in y0s[:5])
 
             mss.append(bind_results(mss0, keys=True, Scenario=scenario))
 
         mss = bind_results(mss, keys=False)
-        mss.to_csv(f'{out_path}/Runs_Intv.csv')
+        mss.to_csv(f'{out_path}/Runs_Intv0.csv')

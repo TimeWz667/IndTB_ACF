@@ -1,6 +1,5 @@
 from sims_pars.fitting.base import AbsObjectiveSimBased
 from itertools import groupby
-from sim.util import simulate
 import pandas as pd
 import numpy as np
 import json

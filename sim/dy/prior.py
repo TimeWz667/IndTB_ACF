@@ -1,7 +1,24 @@
 from sim.misc import read_parameters
+from sims_pars import bayes_net_from_script
 
 __author__ = 'Chu-Chang Ku'
 __all__ = ['get_bn']
+
+
+def read_parameters(name, root, *filepaths):
+    with open(root, mode='r') as f:
+        script = f.read()
+        bn = bayes_net_from_script(script)
+
+    filepaths = list(filepaths)
+
+    if len(filepaths) > 0:
+        for i, filepath in enumerate(filepaths):
+            with open(filepath, mode='r') as f:
+                script = f.read()
+                bn = bn.merge(f'{name}{i}', bayes_net_from_script(script))
+    bn.Name = name
+    return bn
 
 
 def get_bn(dir_prior='../../prior'):

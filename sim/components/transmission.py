@@ -1,12 +1,10 @@
 import numpy as np
-from numba import njit
 from sim.components.base import Process
 
 __author__ = 'Chu-Chang Ku'
 __all__ = ['Transmission']
 
 
-@njit
 def infection(sus, trans, mixing, y):
     n_tb, n_area = y.shape
     infectious = np.zeros(n_area)

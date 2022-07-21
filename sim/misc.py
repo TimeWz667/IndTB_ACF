@@ -1,4 +1,4 @@
-from sims_pars import bayes_net_from_script
+# from sims_pars import bayes_net_from_script
 
 __author__ = 'Chu-Chang Ku'
 __all__ = ['read_parameters']

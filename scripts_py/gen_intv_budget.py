@@ -5,12 +5,11 @@ intvs = dict()
 
 intvs['Baseline'] = {}
 
-for budget in np.linspace(0.002, 0.05, 25):
-    if budget > 0:
-        intvs[f'High, Budget={budget}, Risk'] = {'ACF': {'Type': 'high', 'Yield': budget, 'HiRisk': True}}
-        intvs[f'High, Budget={budget}, Universal'] = {'ACF': {'Type': 'high', 'Yield': budget, 'HiRisk': False}}
-        intvs[f'Mod, Budget={budget}, Risk'] = {'ACF': {'Type': 'mod', 'Yield': budget, 'HiRisk': True}}
-        intvs[f'Mod, Budget={budget}, Universal'] = {'ACF': {'Type': 'mod', 'Yield': budget, 'HiRisk': False}}
+for budget in np.concatenate([np.linspace(0, 0.002, 6)[:-1], np.linspace(0.002, 0.05, 13)]):
+    intvs[f'High, Budget={budget}, Risk'] = {'ACF': {'Type': 'high', 'Yield': budget, 'HiRisk': True}}
+    intvs[f'High, Budget={budget}, Universal'] = {'ACF': {'Type': 'high', 'Yield': budget, 'HiRisk': False}}
+        # intvs[f'Mod, Budget={budget}, Risk'] = {'ACF': {'Type': 'mod', 'Yield': budget, 'HiRisk': True}}
+        # intvs[f'Mod, Budget={budget}, Universal'] = {'ACF': {'Type': 'mod', 'Yield': budget, 'HiRisk': False}}
 
 
 def fn_post(y0, m, intv):
@@ -43,4 +42,4 @@ if __name__ == '__main__':
         mss.append(bind_results(mss0, keys=True, Scenario=scenario))
 
     mss = bind_results(mss, keys=False)
-    mss.to_csv(f'{out_path}/Runs_Intv.csv')
+    mss.to_csv(f'{out_path}/Runs_IntvE.csv')
