@@ -39,17 +39,18 @@ class Objective(AbsObjectiveSimBased):
 
     def simulate(self, pars):
         time.sleep(0.001)
-        return self.Model.simulate(pars)
+        return self.Model.simulate_to_fit(pars)
 
     def link_likelihood(self, sim):
         ys, ms, msg = sim
         if not msg['succ'] or not ys.success:
             return - np.inf
 
+        ms = pd.DataFrame(ms).set_index('Time')
         li = 0
         for sim, data, scale in self.Map:
             try:
-                li += ((ms[sim][2020] - data) / scale).pow(2).sum()
+                li += ((ms[sim] - data).dropna() / scale).pow(2).sum()
             except KeyError:
                 pass
 
@@ -71,7 +72,7 @@ if __name__ == '__main__':
     print(pars)
     sim = to_fit.simulate(pars)
 
-    print(sim[1].head())
+    print(pd.DataFrame(sim[1]))
 
     li = to_fit.link_likelihood(sim)
     print(li)

@@ -81,7 +81,9 @@ class Model:
     def __call__(self, t, y, pars, intv=None):
         y = y.reshape((I.N_State_TB, I.N_State_Strata))
 
-        calc = self.collect_calc(t, y, pars, intv)
+        calc = dict()
+        self.Demography(t, y, pars, intv, calc)
+        self.Transmission(t, y, pars, intv, calc)
 
         dy = np.zeros_like(y)
 
@@ -90,94 +92,6 @@ class Model:
         dy[I.FLat_DS] += calc['infection_ds'].sum(0)
         dy[I.FLat_DR] += calc['infection_dr'].sum(0)
 
-        # Incidence
-        dy[I.FLat] -= calc['act']
-        dy[I.SLat] -= calc['react']
-        dy[I.RLow] -= calc['rel_tc']
-        dy[I.RHigh] -= calc['rel_td']
-        dy[I.RSt] -= calc['rel_st']
-
-        dy[I.Asym] += calc['inc_smr']
-
-        # Progression
-        dy[I.FLat] -= calc['stab_fl']
-        dy[I.SLat] += calc['stab_fl']
-        dy[I.RLow] -= calc['stab_tc']
-        dy[I.RHigh] -= calc['stab_td']
-        dy[I.RSt] += calc['stab_tc'] + calc['stab_td']
-
-        dy[I.Asym] -= calc['sc_a'] + calc['sym_onset']
-        dy[I.Sym] += calc['sym_onset'] - calc['sc_s']
-        dy[I.ExSym] -= calc['sc_c']
-
-        sc_asc = calc['sc_a'] + calc['sc_s'] + calc['sc_c']
-
-        dy[I.RHigh_DS] += sc_asc[0] + sc_asc[1]
-        dy[I.RHigh_DR] += sc_asc[2] + sc_asc[3]
-
-        # Smear convertion
-        con_a, con_s, con_c = calc['convert_a'], calc['convert_s'], calc['convert_c']
-        dy[I.Asym_Sn] -= con_a
-        dy[I.Asym_Sp] += con_a
-        dy[I.Sym_Sn] -= con_s
-        dy[I.Sym_Sp] += con_s
-        dy[I.ExSym_Sn] -= con_c
-        dy[I.ExSym_Sp] += con_c
-
-        # DR development
-        develop_dr_pub, develop_dr_pri = calc['develop_dr_pub'], calc['develop_dr_pri']
-        dy[[I.Txf_Pub_Sn_DS, I.Txf_Pub_Sp_DS]] -= develop_dr_pub
-        dy[[I.Txf_Pub_Sn_DR, I.Txf_Pub_Sp_DR]] += develop_dr_pub
-        dy[[I.Txf_Pri_Sn_DS, I.Txf_Pri_Sp_DS]] -= develop_dr_pri
-        dy[[I.Txf_Pri_Sn_DR, I.Txf_Pri_Sp_DR]] += develop_dr_pri
-
-        # Dx
-        det_1_pub_s, det_1_pub_c = calc['det_txf_pub_s'], calc['det_txf_pub_c']
-        det_2_pub_s, det_2_pub_c = calc['det_txs_pub_s'], calc['det_txs_pub_c']
-        det_1_pri_s, det_1_pri_c = calc['det_txf_pri_s'], calc['det_txf_pri_c']
-
-        fn_s = calc['fn_pub_s'] + calc['fn_pri_s']
-
-        dy[I.Sym] -= det_1_pub_s + det_2_pub_s + det_1_pri_s + fn_s
-        dy[I.ExSym] += fn_s - (det_1_pub_c + det_2_pub_c + det_1_pri_c)
-        dy[I.Txf_Pub] += det_1_pub_s + det_1_pub_c
-        dy[I.Txf_Pri] += det_1_pri_s + det_1_pri_c
-        dy[I.Txs_Pub] += det_2_pub_s + det_2_pub_c
-        dy[I.Txs_Pri] += 0
-
-        acf_1_pub_s, acf_1_pub_c = calc['acf_txf_pub_s'], calc['acf_txf_pub_c']
-        acf_2_pub_s, acf_2_pub_c = calc['acf_txs_pub_s'], calc['acf_txs_pub_c']
-        dy[I.Sym] -= acf_1_pub_s + acf_2_pub_s
-        dy[I.ExSym] -= acf_1_pub_c + acf_2_pub_c
-        dy[I.Txf_Pub] += acf_1_pub_s + acf_1_pub_c
-        dy[I.Txs_Pub] += acf_2_pub_s + acf_2_pub_c
-
-
-        # Tx
-        tc_1_pub, td_1_pub = calc['tx_succ_txf_pub'], calc['tx_ltfu_txf_pub']
-        tc_1_pri, td_1_pri = calc['tx_succ_txf_pri'], calc['tx_ltfu_txf_pri']
-        tc_2_pub, td_2_pub = calc['tx_succ_txs_pub'], calc['tx_ltfu_txs_pub']
-        tc_2_pri, td_2_pri = calc['tx_succ_txs_pri'], calc['tx_ltfu_txs_pri']
-
-        dy[I.Txf_Pub] -= tc_1_pub + td_1_pub
-        dy[I.Txf_Pri] -= tc_1_pri + td_1_pri
-        dy[I.Txs_Pub] -= tc_2_pub + td_2_pub
-        dy[I.Txs_Pri] -= tc_2_pri + td_2_pri
-
-        tc = tc_1_pub + tc_1_pri + tc_2_pub + tc_2_pri
-        td = td_1_pub + td_1_pri + td_2_pub + td_2_pri
-        dy[I.RLow] += tc[[0, 2]] + tc[[1, 3]]
-        dy[I.RHigh] += td[[0, 2]] + td[[1, 3]]
-
-        tx_switch_pub = calc['tx_switch_pub']
-        dy[I.Txf_Pub] -= tx_switch_pub
-        dy[I.Txs_Pub] += tx_switch_pub
-
-        # Self-clearance
-        dy[I.SLat] -= calc['clear_sl']
-        dy[I.RSt] -= calc['clear_rst']
-        dy[I.U] += (calc['clear_sl'] + calc['clear_rst']).sum(0)
-
         # Demography
         dy[I.U, 0] += calc['births']
         dy -= calc['deaths'] + calc['deaths_tb']
@@ -185,14 +99,8 @@ class Model:
         dy[:, 0] -= calc['prog_comorb']
         dy[:, 1] += calc['prog_comorb']
 
-        # if t <= self.Year0:
-        #     ns = y.sum(0, keepdims=True)
-        #     ns[ns == 0] = 1e-10
-        #     dy -= y / ns * dy.sum(0, keepdims=True)
-        # else:
-        # #     pass
-        if t <= self.Year0:
-            dy -= y / y.sum() * dy.sum()
+        dy += self.Progression.calc_dy2(t, y, pars, intv)
+        dy += self.Cascade.calc_dy2(t, y, pars, intv)
 
         return dy.reshape(-1)
 
@@ -233,7 +141,7 @@ class Model:
             return None, None, {'succ': False, 'res': 'DFE reached'}
 
         mea = [self.measure(t, ys.sol(t), p) for t in [2006, 2012, 2018]]
-        return mea
+        return ys, mea, {'succ': True}
 
     def simulate(self, p):
         if 'sus' not in p:
@@ -303,6 +211,9 @@ if __name__ == '__main__':
     fig, axes = plt.subplots(2, 3)
 
     ms = ms[ms.index > 2000]
+
+    print(ms.IncR.tail(5))
+
     ms.Pop.plot(ax=axes[0, 0])
     ms.Pop_RiskLo.plot(ax=axes[0, 0])
     ms.Pop_RiskHi.plot(ax=axes[0, 0])
@@ -369,4 +280,4 @@ if __name__ == '__main__':
     plt.legend()
     plt.show()
 
-    print(ms3)
+    # print(ms3)

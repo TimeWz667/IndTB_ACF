@@ -1,9 +1,24 @@
 import pandas as pd
 from scipy.integrate import solve_ivp
 import numpy as np
+from numba import njit
 
 __author__ = 'Chu-Chang Ku'
-__all__ = ['warmup', 'update', 'simulate', 'bind_results']
+__all__ = ['calc_dy', 'warmup', 'update', 'simulate', 'bind_results']
+
+
+@njit
+def calc_dy(y, frs, tos, rates):
+    dy = np.zeros_like(y)
+
+    for i in range(len(frs)):
+        fr, to, rate = frs[i], tos[i], rates[i]
+
+        n_tr = rate * y[fr]
+        dy[fr] -= n_tr
+        dy[to] += n_tr
+
+    return dy
 
 
 def warmup(model, pars, t_warmup, t_start, dfe=None):
