@@ -6,13 +6,13 @@ __all__ = ['Cascade']
 
 
 class Cascade(Process):
-    def __init__(self, keys, intv=None):
-        Process.__init__(self, keys, intv)
+    def __init__(self, keys):
+        Process.__init__(self, keys)
         self.T0_Rif = 1970
         self.T0_DOTS = 1990
         self.T1_DOTS = 2007
 
-    def __call__(self, t, y, pars, calc):
+    def __call__(self, t, y, pars, intv, calc):
         I = self.Keys
 
         r_cs_s, r_cs_c = pars['r_cs_s'], pars['r_cs_c']
@@ -55,14 +55,13 @@ class Cascade(Process):
         calc['fn_pri_c'] = r_cs_c * p_entry_pri * (1 - p_txi) * y[I.ExSym]
 
         # ACF
-
         r_acf, r_acf_tp, r_acf_fp, p_dst = 0, 0, 0, 0
         n_nontb = pars['NonTB'] * y.sum(0) if 'NonTB' in pars else 0
         n_tb = y[I.Sym].sum(0) + y[I.ExSym].sum(0)
         n = y.sum()
-        if t > self.Intervention.T0_Intv:
+        if intv is not None and t > intv.T0_Intv:
             r_acf, r_acf_tp, r_acf_fp, p_dst = \
-                self.Intervention.modify_acf(t, r_acf, r_acf_tp, r_acf_fp, p_dst, pars, n_tb / n, n_nontb / n)
+                intv.modify_acf(t, r_acf, r_acf_tp, r_acf_fp, p_dst, pars, n_tb / n, n_nontb / n)
 
         p_dst_acf = np.array([0, 0, p_dst, p_dst]).reshape((-1, 1))
 
@@ -110,7 +109,7 @@ class Cascade(Process):
 
             calc['tx_switch_pub'] = 0 * y[I.Txf_Pub]
 
-    def measure(self, t, y, pars, calc, mea):
+    def measure(self, t, y, pars, intv, calc, mea):
         I = self.Keys
 
         ns = y.sum(0)

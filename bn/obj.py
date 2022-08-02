@@ -49,7 +49,7 @@ class Objective(AbsObjectiveSimBased):
         li = 0
         for sim, data, scale in self.Map:
             try:
-                li += ((ms[sim] - data).dropna() / scale).pow(2).sum()
+                li += ((ms[sim][2020] - data) / scale).pow(2).sum()
             except KeyError:
                 pass
 
@@ -58,12 +58,13 @@ class Objective(AbsObjectiveSimBased):
 
 if __name__ == '__main__':
     from sim.inputs import load_inputs
-    from sim.dy import Model, get_bn
+    from sim.dy import Model
+    from bn.prior import get_bn
 
     inputs = load_inputs('../data/pars.json')
 
     to_fit = Objective(model=Model(inputs, year0=1970),
-                       bn=get_bn('../prior'),
+                       bn=get_bn('prior'),
                        filepath_targets='../data/targets.json')
 
     pars = to_fit.sample_prior()

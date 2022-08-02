@@ -9,9 +9,4 @@ PCore transmission {
     red_sus ~ unif(0.15, 0.25)
     rr_sus_ltbi ~ unif(0.15, 0.25)
 
-    y0_decline = 2012
-    y0_baseline = 2022
-
-    adr = 0
-    adr_adj = 0
 }

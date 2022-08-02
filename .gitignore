@@ -68,3 +68,6 @@ env/
 out/
 .Rproj.user
 /.Rhistory
+.ipynb_checkpoints
+/notebooks/.ipynb_checkpoints
+/notebooks/out

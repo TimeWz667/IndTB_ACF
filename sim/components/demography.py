@@ -6,7 +6,7 @@ __all__ = ['Demography']
 
 
 class Demography(Process):
-    def __call__(self, t, y, pars, calc):
+    def __call__(self, t, y, pars, intv, calc):
         I = self.Keys
 
         dr = np.ones_like(y) * pars['r_die']
@@ -35,7 +35,7 @@ class Demography(Process):
             r_comorb = (pars['p_comorb'] / (1 - pars['p_comorb'])) * r_die_crude
         calc['prog_comorb'] = r_comorb * y[:, 0]
 
-    def measure(self, t, y, pars, calc, mea):
+    def measure(self, t, y, pars, intv, calc, mea):
         I = self.Keys
 
         ns = y.sum(0)

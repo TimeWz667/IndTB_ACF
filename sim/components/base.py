@@ -3,12 +3,11 @@ __all__ = ['Process']
 
 
 class Process:
-    def __init__(self, keys, intv=None):
+    def __init__(self, keys):
         self.Keys = keys
-        self.Intervention = intv
 
-    def __call__(self, t, y, pars, calc):
+    def __call__(self, t, y, pars, intv, calc):
         pass
 
-    def measure(self, t, y, pars, calc, mea):
+    def measure(self, t, y, pars, intv, calc, mea):
         pass

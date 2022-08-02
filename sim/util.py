@@ -3,7 +3,7 @@ from scipy.integrate import solve_ivp
 import numpy as np
 
 __author__ = 'Chu-Chang Ku'
-__all__ = ['warmup', 'update', 'update_intv', 'simulate', 'bind_results']
+__all__ = ['warmup', 'update', 'simulate', 'bind_results']
 
 
 def warmup(model, pars, t_warmup, t_start, dfe=None):
@@ -18,10 +18,10 @@ def warmup(model, pars, t_warmup, t_start, dfe=None):
         return ys0, None, {'succ': True}
 
 
-def update(model, ys0, pars, t_out, dfe=None):
+def update(model, ys0, pars, t_out, dfe=None, intv=None):
     t_start, t_end = min(t_out), max(t_out)
     ys0 = np.array(ys0)
-    ys = solve_ivp(model, [t_start, t_end], ys0, args=(pars,), events=dfe, dense_output=True)
+    ys = solve_ivp(model, [t_start, t_end], ys0, args=(pars, intv), events=dfe, dense_output=True)
 
     if len(ys.t_events[0]) > 0 or not ys.success:
         return None, None, {'succ': False, 'res': 'DFE reached'}
@@ -30,14 +30,6 @@ def update(model, ys0, pars, t_out, dfe=None):
     ms = pd.DataFrame(ms).set_index('Time')
 
     msg = {'succ': True, 't_out': t_out, 'pars': pars}
-    return ys, ms, msg
-
-
-def update_intv(model, ys0, pars, intv, t_out, dfe=None):
-    intv0 = model.Intervention
-    model.Intervention = intv
-    ys, ms, msg = update(model, ys0, pars, t_out, dfe)
-    model.Intervention = intv0
     return ys, ms, msg
 
 

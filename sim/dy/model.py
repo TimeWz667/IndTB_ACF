@@ -2,8 +2,9 @@ import numpy as np
 import pandas as pd
 from sim.components import Demography, Transmission, Progression, Cascade
 from sim.intv import Intervention
-from sim.util import simulate, update_intv
+from sim.util import simulate, update
 import sim.dy.keys as I
+from scipy.integrate import solve_ivp
 
 __author__ = 'Chu-Chang Ku'
 __all__ = ['Model']
@@ -13,29 +14,12 @@ class Model:
     def __init__(self, inp, year0=2010):
         self.Inputs = inp
 
-        intv = Intervention()
-        self.Demography = Demography(I, intv)
-        self.Transmission = Transmission(I, intv)
-        self.Progression = Progression(I, intv)
-        self.Cascade = Cascade(I, intv)
-        self.__intervention = intv
+        self.Demography = Demography(I)
+        self.Transmission = Transmission(I)
+        self.Progression = Progression(I)
+        self.Cascade = Cascade(I)
 
         self.Year0 = year0
-
-    @property
-    def Intervention(self):
-        return self.__intervention
-
-    @Intervention.setter
-    def Intervention(self, intv):
-        if isinstance(intv, dict):
-            intv = Intervention.parse_obj(intv)
-
-        self.__intervention = intv
-        self.Demography.Intervention = intv
-        self.Transmission.Intervention = intv
-        self.Progression.Intervention = intv
-        self.Cascade.Intervention = intv
 
     def update_parameters(self, pars):
         pars = dict(pars)
@@ -72,7 +56,7 @@ class Model:
         trans[I.Infectious_Sp_DR] = 1
         trans[I.Asym] *= pars['rr_inf_asym']
 
-        pars['mixing'] = np.ones((I.N_State_Strata, I.N_State_Strata))
+        pars['beta_dr'] = pars['beta_ds'] * pars['rr_beta_dr']
 
         return pars
 
@@ -86,19 +70,18 @@ class Model:
         y0[I.U] = n0 - y0.sum(0)
         return y0
 
-    def collect_calc(self, t, y, pars):
-        #t = max(t, self.Year0)
+    def collect_calc(self, t, y, pars, intv):
         calc = dict()
-        self.Demography(t, y, pars, calc)
-        self.Transmission(t, y, pars, calc)
-        self.Progression(t, y, pars, calc)
-        self.Cascade(t, y, pars, calc)
+        self.Demography(t, y, pars, intv, calc)
+        self.Transmission(t, y, pars, intv, calc)
+        self.Progression(t, y, pars, intv, calc)
+        self.Cascade(t, y, pars, intv, calc)
         return calc
 
-    def __call__(self, t, y, pars):
+    def __call__(self, t, y, pars, intv=None):
         y = y.reshape((I.N_State_TB, I.N_State_Strata))
 
-        calc = self.collect_calc(t, y, pars)
+        calc = self.collect_calc(t, y, pars, intv)
 
         dy = np.zeros_like(y)
 
@@ -213,42 +196,59 @@ class Model:
 
         return dy.reshape(-1)
 
-    def measure(self, t, y, pars):
+    def measure(self, t, y, pars, intv=None):
         y = y.reshape((I.N_State_TB, I.N_State_Strata))
 
-        calc = self.collect_calc(t, y, pars)
+        calc = self.collect_calc(t, y, pars, intv)
 
         mea = {'Time': t}
-        self.Demography.measure(t, y, pars, calc, mea)
-        self.Transmission.measure(t, y, pars, calc, mea)
-        self.Progression.measure(t, y, pars, calc, mea)
-        self.Cascade.measure(t, y, pars, calc, mea)
+        self.Demography.measure(t, y, pars, intv, calc, mea)
+        self.Transmission.measure(t, y, pars, intv, calc, mea)
+        self.Progression.measure(t, y, pars, intv, calc, mea)
+        self.Cascade.measure(t, y, pars, intv, calc, mea)
 
         return mea
 
     @staticmethod
-    def dfe(t, y, pars):
+    def dfe(t, y, pars, intv=None):
         ntb = y.reshape((I.N_State_TB, I.N_State_Strata))[I.Infectious].sum()
         return ntb - 0.5
 
     dfe.terminal = True
     dfe.direction = -1
 
+    def simulate_to_fit(self, p):
+        if 'sus' not in p:
+            p = self.update_parameters(p)
+
+        t_start = 2006
+        y0 = self.get_y0(p).reshape(-1)
+        ys0 = solve_ivp(self, [t_start - 300, t_start], y0, args=(p,), events=self.dfe, method='RK23')
+        if len(ys0.t_events[0]) > 0 or not ys0.success:
+            return None, None, {'succ': False, 'res': 'DFE reached'}
+
+        y1 = ys0.y[:, -1]
+        ys = solve_ivp(self, [t_start, 2018], y1, args=(p,), events=self.dfe, method='RK23', dense_output=True)
+        if len(ys.t_events[0]) > 0 or not ys.success:
+            return None, None, {'succ': False, 'res': 'DFE reached'}
+
+        mea = [self.measure(t, ys.sol(t), p) for t in [2006, 2012, 2018]]
+        return mea
+
     def simulate(self, p):
-        p0 = p
-        p = self.update_parameters(p)
+        if 'sus' not in p:
+            p = self.update_parameters(p)
 
         ys, ms, msg = simulate(self,
                                pars=p,
                                t_warmup=300,
                                t_out=np.linspace(1970, 2020, int(50 * 2) + 1),
                                dfe=self.dfe)
-        msg['pars'] = p0
         return ys, ms, msg
 
     def form_non_tb_population(self, t0, y0, pars, ppv0, spec):
         calc = dict()
-        self.Cascade(t0, y0.reshape((I.N_State_TB, 2)), pars, calc)
+        self.Cascade(t0, y0.reshape((I.N_State_TB, 2)), pars, None, calc)
         tp = calc['det_txf_pub_s'] + calc['det_txf_pub_c'] + calc['det_txs_pub_s'] + calc['det_txs_pub_c']
         tp += calc['det_txf_pri_s'] + calc['det_txf_pri_c']
         tp = tp.sum()
@@ -258,9 +258,6 @@ class Model:
         pars['spec0'] = spec
 
     def simulate_onward(self, y0, p, intv=None, t_end=2030, dt=0.5, ppv0=0.85, spec=0.99):
-        if intv is None:
-            intv = self.Intervention
-
         t_start = 2020
         p0 = p
         if 'sus' not in p:
@@ -268,8 +265,11 @@ class Model:
         if 'NonTB' not in p:
             self.form_non_tb_population(t_start, y0, p, ppv0, spec)
 
+        if intv is not None and not isinstance(intv, Intervention):
+            intv = Intervention.parse_obj(intv)
+
         n_ts = int((t_end - t_start) / dt) + 1
-        ys, ms, msg = update_intv(self, y0, pars=p,
+        ys, ms, msg = update(self, y0, pars=p,
                                   intv=intv,
                                   t_out=np.linspace(t_start, t_end, n_ts),
                                   dfe=self.dfe)
@@ -278,17 +278,19 @@ class Model:
 
 
 if __name__ == '__main__':
-    from sim.dy.prior import get_bn
+    import json
     from sim import load_inputs
-    from sims_pars import sample
     import matplotlib.pylab as plt
+
+    with open('../../data/test_priors.json', 'r') as f:
+        prior = json.load(f)
 
     inputs = load_inputs('../../data/pars.json')
 
     m = Model(inputs, year0=1970)
 
-    sc = get_bn()
-    p0 = sample(sc, {'beta_ds': 11, 'rr_risk_comorb': 20, 'rr_beta_dr': 1.02})
+    p0 = prior[0]
+    p0.update({'beta_ds': 11, 'rr_risk_comorb': 20, 'rr_beta_dr': 1.02, 'p_comorb': 0.3})
 
     ys, ms, msg = m.simulate(p0)
     ys = ys.y.T[-1]

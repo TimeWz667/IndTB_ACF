@@ -169,7 +169,7 @@ class ModelCascade(Model):
 
 
 if __name__ == '__main__':
-    from sim.dy.prior import get_bn
+    from prior import get_bn
     from sim import load_inputs
     from sims_pars import sample
     import matplotlib.pylab as plt

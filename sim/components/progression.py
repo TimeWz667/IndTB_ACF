@@ -6,11 +6,10 @@ __all__ = ['Progression']
 
 
 class Progression(Process):
-    def __init__(self, keys, intv=None):
+    def __init__(self, keys):
         Process.__init__(self, keys)
-        self.Intervention = intv
 
-    def __call__(self, t, y, pars, calc):
+    def __call__(self, t, y, pars, intv, calc):
         I = self.Keys
 
         pr0 = pars['p_primary']
@@ -72,7 +71,7 @@ class Progression(Process):
         calc['develop_dr_pub'] = r_mdr_tx * y[[I.Txf_Pub_Sn_DS, I.Txf_Pub_Sp_DS]]
         calc['develop_dr_pri'] = r_mdr_tx * y[[I.Txf_Pri_Sn_DS, I.Txf_Pri_Sp_DS]]
 
-    def measure(self, t, y, pars, calc, mea):
+    def measure(self, t, y, pars, intv, calc, mea):
         I = self.Keys
         ns = y.sum(0)
         n = ns.sum()
