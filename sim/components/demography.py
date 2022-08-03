@@ -35,8 +35,23 @@ class Demography(Process):
             r_comorb = (pars['p_comorb'] / (1 - pars['p_comorb'])) * r_die_crude
         calc['prog_comorb'] = r_comorb * y[:, 0]
 
-    def measure(self, t, y, pars, intv, calc, mea):
+    def calc_dy(self, t, y, pars, intv):
         I = self.Keys
+
+        calc = dict()
+        self(t, y, pars, intv, calc)
+        dy = np.zeros_like(y)
+        dy[I.U, 0] += calc['births']
+        dy -= calc['deaths'] + calc['deaths_tb']
+
+        dy[:, 0] -= calc['prog_comorb']
+        dy[:, 1] += calc['prog_comorb']
+        return dy
+
+    def measure(self, t, y, pars, intv, mea):
+        I = self.Keys
+        calc = dict()
+        self(t, y, pars, intv, calc)
 
         ns = y.sum(0)
         mor = calc['deaths'][I.Infectious].sum(0)

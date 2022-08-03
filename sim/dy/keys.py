@@ -53,9 +53,14 @@ N_State_TB = 39
 
 
 # Meta group
-Asym = [Asym_Sn_DS, Asym_Sp_DS, Asym_Sn_DR, Asym_Sp_DR]
-Sym = [Sym_Sn_DS, Sym_Sp_DS, Sym_Sn_DR, Sym_Sp_DR]
-ExSym = [ExSym_Sn_DS, ExSym_Sp_DS, ExSym_Sn_DR, ExSym_Sp_DR]
+Asym_DS, Asym_DR = [Asym_Sn_DS, Asym_Sp_DS], [Asym_Sn_DR, Asym_Sp_DR]
+Asym = Asym_DS + Asym_DR
+
+Sym_DS, Sym_DR = [Sym_Sn_DS, Sym_Sp_DS], [Sym_Sn_DR, Sym_Sp_DR]
+Sym = Sym_DS + Sym_DR
+
+ExSym_DS, ExSym_DR = [ExSym_Sn_DS, ExSym_Sp_DS], [ExSym_Sn_DR, ExSym_Sp_DR]
+ExSym = ExSym_DS + ExSym_DR
 
 Asym_Sn = [Asym_Sn_DS, Asym_Sn_DR]
 Sym_Sn = [Sym_Sn_DS, Sym_Sn_DR]
@@ -91,8 +96,13 @@ Infectious_Sp_DR = [x[3] for x in [Asym, Sym, ExSym]]
 # Infectious_Sn_DR = [x[2] for x in [Asym, Sym, ExSym, Pub, Pri, ACFS_Asym, ACFS_Sym, ACFC_Sym]]
 # Infectious_Sp_DR = [x[3] for x in [Asym, Sym, ExSym, Pub, Pri, ACFS_Asym, ACFS_Sym, ACFC_Sym]]
 
+Infectious_DS = Infectious_Sn_DS + Infectious_Sp_DS
+Infectious_DR = Infectious_Sn_DR + Infectious_Sp_DR
+
 Infectious = Infectious_Sn_DS + Infectious_Sp_DS + Infectious_Sn_DR + Infectious_Sp_DR
 
+Infectious_DS.sort()
+Infectious_DR.sort()
 Infectious_Sn_DS.sort()
 Infectious_Sp_DS.sort()
 Infectious_Sn_DR.sort()

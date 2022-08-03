@@ -5,27 +5,34 @@ __author__ = 'Chu-Chang Ku'
 __all__ = ['Transmission']
 
 
-def infection_no_mixing(sus, trans, y):
+def infection(sus, trans, y):
     foi = (trans * y).sum() / y.sum()
     return (sus * y) * foi
 
 
 class Transmission(Process):
     def __call__(self, t, y, pars, intv, calc):
-        calc['infection_ds'] = infection_no_mixing(
-            sus=pars['sus'],
-            trans=pars['trans_ds'],
-            y=y
-        ) * pars['beta_ds']
+        calc['infection_ds'] = infection(sus=pars['sus'], trans=pars['trans_ds'], y=y) * pars['beta_ds']
+        calc['infection_dr'] = infection(sus=pars['sus'], trans=pars['trans_dr'], y=y) * pars['beta_dr']
 
-        calc['infection_dr'] = infection_no_mixing(
-            sus=pars['sus'],
-            trans=pars['trans_dr'],
-            y=y
-        ) * pars['beta_dr']
-
-    def measure(self, t, y, pars, intv, calc, mea):
+    def calc_dy(self, t, y, pars, intv):
         I = self.Keys
+        calc = dict()
+        self(t, y, pars, intv, calc)
+
+        dy = np.zeros_like(y)
+
+        # Infection
+        dy -= calc['infection_ds'] + calc['infection_dr']
+        dy[I.FLat_DS] += calc['infection_ds'].sum(0)
+        dy[I.FLat_DR] += calc['infection_dr'].sum(0)
+
+        return dy
+
+    def measure(self, t, y, pars, intv, mea):
+        I = self.Keys
+        calc = dict()
+        self(t, y, pars, intv, calc)
 
         inf_ds = calc['infection_ds'].sum(0)
         inf_dr = calc['infection_dr'].sum(0)

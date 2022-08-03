@@ -29,7 +29,7 @@ class DataModel:
         'p_succ_txf_pub': 0.85, 'p_succ_txf_pri': 0.6,
         'p_succ_txs_pub': 0.46, 'p_succ_txs_pri': 0,
         'p_tr_pub': 0.88,
-        'r_mdr_tx': 0.01,
+        'r_mdr_tx': 0.1,
         'r_succ_txf_pub': 2, 'r_succ_txf_pri': 2,
         'r_succ_txs_pub': 0.5, 'r_succ_txs_pri': 0,
         'r_ltfu_txf_pub': 0.3529411764705883, 'r_ltfu_txf_pri': 1.3333333333333335,

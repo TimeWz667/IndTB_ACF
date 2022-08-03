@@ -1,5 +1,5 @@
 from sim.components.base import Process
-from sim.util import calc_dy
+from sim.util import calc_dy, extract_tr
 import numpy as np
 
 __author__ = 'Chu-Chang Ku'
@@ -72,61 +72,7 @@ class Progression(Process):
         calc['develop_dr_pub'] = r_mdr_tx * y[[I.Txf_Pub_Sn_DS, I.Txf_Pub_Sp_DS]]
         calc['develop_dr_pri'] = r_mdr_tx * y[[I.Txf_Pri_Sn_DS, I.Txf_Pri_Sp_DS]]
 
-    def calc_dy(self, t, y, pars, intv):
-        I = self.Keys
-        calc = dict()
-        self(t, y, pars, intv, calc)
-        dy = np.zeros_like(y)
-
-        # Incidence
-        dy[I.FLat] -= calc['act']
-        dy[I.SLat] -= calc['react']
-        dy[I.RLow] -= calc['rel_tc']
-        dy[I.RHigh] -= calc['rel_td']
-        dy[I.RSt] -= calc['rel_st']
-
-        dy[I.Asym] += calc['inc_smr']
-
-        # Progression
-        dy[I.FLat] -= calc['stab_fl']
-        dy[I.SLat] += calc['stab_fl']
-        dy[I.RLow] -= calc['stab_tc']
-        dy[I.RHigh] -= calc['stab_td']
-        dy[I.RSt] += calc['stab_tc'] + calc['stab_td']
-
-        dy[I.Asym] -= calc['sc_a'] + calc['sym_onset']
-        dy[I.Sym] += calc['sym_onset'] - calc['sc_s']
-        dy[I.ExSym] -= calc['sc_c']
-
-        sc_asc = calc['sc_a'] + calc['sc_s'] + calc['sc_c']
-
-        dy[I.RHigh_DS] += sc_asc[0] + sc_asc[1]
-        dy[I.RHigh_DR] += sc_asc[2] + sc_asc[3]
-
-        # Smear convertion
-        con_a, con_s, con_c = calc['convert_a'], calc['convert_s'], calc['convert_c']
-        dy[I.Asym_Sn] -= con_a
-        dy[I.Asym_Sp] += con_a
-        dy[I.Sym_Sn] -= con_s
-        dy[I.Sym_Sp] += con_s
-        dy[I.ExSym_Sn] -= con_c
-        dy[I.ExSym_Sp] += con_c
-
-        # DR development
-        develop_dr_pub, develop_dr_pri = calc['develop_dr_pub'], calc['develop_dr_pri']
-        dy[[I.Txf_Pub_Sn_DS, I.Txf_Pub_Sp_DS]] -= develop_dr_pub
-        dy[[I.Txf_Pub_Sn_DR, I.Txf_Pub_Sp_DR]] += develop_dr_pub
-        dy[[I.Txf_Pri_Sn_DS, I.Txf_Pri_Sp_DS]] -= develop_dr_pri
-        dy[[I.Txf_Pri_Sn_DR, I.Txf_Pri_Sp_DR]] += develop_dr_pri
-
-        # Self-clearance
-        dy[I.SLat] -= calc['clear_sl']
-        dy[I.RSt] -= calc['clear_rst']
-        dy[I.U] += (calc['clear_sl'] + calc['clear_rst']).sum(0)
-
-        return dy
-
-    def calc_dy2(self, t, y, pars, intv):
+    def get_trs(self, t, y, pars, intv):
         I = self.Keys
 
         pr0 = pars['p_primary']
@@ -139,108 +85,116 @@ class Progression(Process):
         rr_comorb = pars['rr_risk_comorb']
 
         inc_l = [
-            (I.FLat_DS, I.Asym_Sn_DS, r_act * p_sn0),
-            (I.FLat_DS, I.Asym_Sp_DS, r_act * p_sp0),
-            (I.FLat_DR, I.Asym_Sn_DR, r_act * p_sn0),
-            (I.FLat_DR, I.Asym_Sp_DR, r_act * p_sp0),
+            (I.FLat_DS, I.Asym_Sn_DS, r_act * p_sn0, 'inc_recent'),
+            (I.FLat_DS, I.Asym_Sp_DS, r_act * p_sp0, 'inc_recent'),
+            (I.FLat_DR, I.Asym_Sn_DR, r_act * p_sn0, 'inc_recent'),
+            (I.FLat_DR, I.Asym_Sp_DR, r_act * p_sp0, 'inc_recent'),
 
-            (I.SLat_DS, I.Asym_Sn_DS, r_react * p_sn0),
-            (I.SLat_DS, I.Asym_Sp_DS, r_react * p_sp0),
-            (I.SLat_DR, I.Asym_Sn_DR, r_react * p_sn0),
-            (I.SLat_DR, I.Asym_Sp_DR, r_react * p_sp0),
+            (I.SLat_DS, I.Asym_Sn_DS, r_react * p_sn0, 'inc_remote'),
+            (I.SLat_DS, I.Asym_Sp_DS, r_react * p_sp0, 'inc_remote'),
+            (I.SLat_DR, I.Asym_Sn_DR, r_react * p_sn0, 'inc_remote'),
+            (I.SLat_DR, I.Asym_Sp_DR, r_react * p_sp0, 'inc_remote'),
 
-            (I.RLow_DS, I.Asym_Sn_DS, r_rel_tc * p_sn0),
-            (I.RLow_DS, I.Asym_Sp_DS, r_rel_tc * p_sp0),
-            (I.RLow_DR, I.Asym_Sn_DR, r_rel_tc * p_sn0),
-            (I.RLow_DR, I.Asym_Sp_DR, r_rel_tc * p_sp0),
+            (I.RLow_DS, I.Asym_Sn_DS, r_rel_tc * p_sn0, 'inc_remote'),
+            (I.RLow_DS, I.Asym_Sp_DS, r_rel_tc * p_sp0, 'inc_remote'),
+            (I.RLow_DR, I.Asym_Sn_DR, r_rel_tc * p_sn0, 'inc_remote'),
+            (I.RLow_DR, I.Asym_Sp_DR, r_rel_tc * p_sp0, 'inc_remote'),
 
-            (I.RHigh_DS, I.Asym_Sn_DS, r_rel_td * p_sn0),
-            (I.RHigh_DS, I.Asym_Sp_DS, r_rel_td * p_sp0),
-            (I.RHigh_DR, I.Asym_Sn_DR, r_rel_td * p_sn0),
-            (I.RHigh_DR, I.Asym_Sp_DR, r_rel_td * p_sp0),
+            (I.RHigh_DS, I.Asym_Sn_DS, r_rel_td * p_sn0, 'inc_remote'),
+            (I.RHigh_DS, I.Asym_Sp_DS, r_rel_td * p_sp0, 'inc_remote'),
+            (I.RHigh_DR, I.Asym_Sn_DR, r_rel_td * p_sn0, 'inc_remote'),
+            (I.RHigh_DR, I.Asym_Sp_DR, r_rel_td * p_sp0, 'inc_remote'),
 
-            (I.RSt_DS, I.Asym_Sn_DS, r_rel_st * p_sn0),
-            (I.RSt_DS, I.Asym_Sp_DS, r_rel_st * p_sp0),
-            (I.RSt_DR, I.Asym_Sn_DR, r_rel_st * p_sn0),
-            (I.RSt_DR, I.Asym_Sp_DR, r_rel_st * p_sp0),
+            (I.RSt_DS, I.Asym_Sn_DS, r_rel_st * p_sn0, 'inc_remote'),
+            (I.RSt_DS, I.Asym_Sp_DS, r_rel_st * p_sp0, 'inc_remote'),
+            (I.RSt_DR, I.Asym_Sn_DR, r_rel_st * p_sn0, 'inc_remote'),
+            (I.RSt_DR, I.Asym_Sp_DR, r_rel_st * p_sp0, 'inc_remote'),
         ]
 
         inc_h = list(inc_l)
         for i in range(8):
-            fr, to, rate = inc_h[i]
-            inc_h[i] = fr, to, rate * rr_comorb
+            fr, to, rate, desc = inc_h[i]
+            inc_h[i] = fr, to, rate * rr_comorb, desc
 
         prog = list()
 
         r_stab = pars['r_stab']
         for fr, to in zip(I.FLat, I.SLat):
-            prog.append((fr, to, r_stab))
+            prog.append((fr, to, r_stab, 'stab'))
         for fr, to in zip(I.RLow, I.RSt):
-            prog.append((fr, to, r_stab))
+            prog.append((fr, to, r_stab, 'stab'))
         for fr, to in zip(I.RHigh, I.RSt):
-            prog.append((fr, to, r_stab))
+            prog.append((fr, to, r_stab, 'stab'))
 
         r_sc = pars['r_sc']
         for fr in I.Infectious_Sn_DS + I.Infectious_Sp_DS:
-            prog.append((fr, I.RHigh_DS, r_sc))
+            prog.append((fr, I.RHigh_DS, r_sc, 'self_cure'))
 
         for fr in I.Infectious_Sn_DR + I.Infectious_Sp_DR:
-            prog.append((fr, I.RHigh_DR, r_sc))
+            prog.append((fr, I.RHigh_DR, r_sc, 'self_cure'))
 
         r_clear = pars['r_clear']
         for fr in I.SLat + I.RSt:
-            prog.append((fr, I.U, r_clear))
+            prog.append((fr, I.U, r_clear, 'self_clear'))
 
         for fr, to in zip(I.Asym_Sn, I.Sym_Sn):
-            prog.append((fr, to, pars['r_onset_sn']))
+            prog.append((fr, to, pars['r_onset_sn'], 'onset'))
         for fr, to in zip(I.Asym_Sp, I.Sym_Sp):
-            prog.append((fr, to, pars['r_onset_sp']))
+            prog.append((fr, to, pars['r_onset_sp'], 'onset'))
 
         for fr, to in zip(I.Asym_Sn, I.Asym_Sp):
-            prog.append((fr, to, pars['r_convert_a']))
+            prog.append((fr, to, pars['r_convert_a'], 'convert'))
         for fr, to in zip(I.Sym_Sn + I.ExSym_Sn, I.Sym_Sp + I.ExSym_Sp):
-            prog.append((fr, to, pars['r_convert_s']))
+            prog.append((fr, to, pars['r_convert_s'], 'convert'))
 
-        r_mdr_tx = pars['r_mdr_tx']
-        prog += [
-            (I.Txf_Pub_Sn_DS, I.Txf_Pub_Sn_DR, r_mdr_tx),
-            (I.Txf_Pub_Sp_DS, I.Txf_Pub_Sp_DR, r_mdr_tx),
-            (I.Txf_Pri_Sn_DS, I.Txf_Pri_Sn_DR, r_mdr_tx),
-            (I.Txf_Pri_Sp_DS, I.Txf_Pri_Sp_DR, r_mdr_tx)
-        ]
+        if t > 1980:
+            r_mdr_tx = pars['r_mdr_tx']
+            prog += [
+                (I.Txf_Pub_Sn_DS, I.Txf_Pub_Sn_DR, r_mdr_tx, 'dev_dr'),
+                (I.Txf_Pub_Sp_DS, I.Txf_Pub_Sp_DR, r_mdr_tx, 'dev_dr'),
+                (I.Txf_Pri_Sn_DS, I.Txf_Pri_Sn_DR, r_mdr_tx, 'dev_dr'),
+                (I.Txf_Pri_Sp_DS, I.Txf_Pri_Sp_DR, r_mdr_tx, 'dev_dr')
+            ]
 
         trs_l = inc_l + prog
         trs_h = inc_h + prog
+        return trs_l, trs_h
 
+    def calc_dy(self, t, y, pars, intv):
+        trs_l, trs_h = self.get_trs(t, y, pars, intv)
         dy = np.zeros_like(y)
-        dy[:, 0] = calc_dy(y[:, 0],
-                           frs=np.array([fr for fr, _, _ in trs_l], int),
-                           tos=np.array([to for _, to, _ in trs_l], int),
-                           rates=np.array([rate for _, _, rate in trs_l])
-                           )
-
-        dy[:, 1] = calc_dy(y[:, 1],
-                           frs=np.array([fr for fr, _, _ in trs_h], int),
-                           tos=np.array([to for _, to, _ in trs_h], int),
-                           rates=np.array([rate for _, _, rate in trs_h])
-                           )
-
+        dy[:, 0] = calc_dy(y[:, 0], trs_l)
+        dy[:, 1] = calc_dy(y[:, 1], trs_h)
         return dy
 
-
-
-    def measure(self, t, y, pars, intv, calc, mea):
+    def measure(self, t, y, pars, intv, mea):
         I = self.Keys
+        trs_l, trs_h = self.get_trs(t, y, pars, intv)
+
+        inc_recent = np.array([
+            extract_tr(y[:, 0], trs_l, lambda x: x[3] == 'inc_recent'),
+            extract_tr(y[:, 1], trs_h, lambda x: x[3] == 'inc_recent')
+        ])
+        inc_remote = np.array([
+            extract_tr(y[:, 0], trs_l, lambda x: x[3] == 'inc_remote'),
+            extract_tr(y[:, 1], trs_h, lambda x: x[3] == 'inc_remote')
+        ])
+
+        inc_dr = np.array([
+            extract_tr(y[:, 0], trs_l, lambda x: x[3].startswith('inc') and x[1] in I.Asym_DR),
+            extract_tr(y[:, 1], trs_h, lambda x: x[3].startswith('inc') and x[1] in I.Asym_DR)
+        ])
+
         ns = y.sum(0)
         n = ns.sum()
-        inc = calc['inc']
+        inc = inc_recent + inc_remote
 
         mea['IncR'] = inc.sum() / n
-        mea['IncR_Recent'] = calc['inc_recent'].sum() / n
-        mea['IncR_Remote'] = calc['inc_remote'].sum() / n
-        mea['Recent'] = calc['inc_recent'].sum() / max(inc.sum(), 1e-10)
-        mea['IncR_DR'] = inc[1].sum() / n
-        mea['IncR_DS'] = inc[0].sum() / n
+        mea['IncR_Recent'] = inc_recent.sum() / n
+        mea['IncR_Remote'] = inc_remote.sum() / n
+        mea['Recent'] = inc_recent.sum() / max(inc.sum(), 1e-10)
+        mea['IncR_DR'] = inc_dr.sum() / n
+        mea['IncR_DS'] = mea['IncR'] - mea['IncR_DR']
         mea['PrDR_Inc'] = mea['IncR_DR'] / max(mea['IncR'], 1e-10)
 
         prev_a = y[I.Asym].sum(0)
@@ -263,7 +217,7 @@ class Progression(Process):
             mea[f'IncR_{strata}'] = inc.sum() / n
             mea[f'IncR_DS_{strata}'] = inc[i].sum() / n
             mea[f'IncR_DR_{strata}'] = inc[i].sum() / n
-            mea[f'Recent_{strata}'] = calc['inc_recent'][i].sum() / max(inc[i].sum(), 1e-15)
+            mea[f'Recent_{strata}'] = inc_recent[i].sum() / max(inc[i].sum(), 1e-15)
 
             mea[f'Prev_{strata}'] = prev[i] / n
             mea[f'LTBI_{strata}'] = ltbi[i] / n

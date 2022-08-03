@@ -37,11 +37,11 @@ class ACF(BaseModel):
 class Intervention(BaseModel):
     ACF: ACF = ACF()
     # ACFPlain: ACFPlain = ACFPlain()
-    T0_Intv: float = 2020
-    T1_Intv: float = 2023
+    T0_Intv: float = 2022
+    T1_Intv: float = 2025
 
     def modify_acf(self, t, r_acf, r_acf_tp, r_acf_fp, p_dst, pars, p_tb, p_nontb):
-        if t > self.T0_Intv and self.ACF.Yield > 0:
+        if t >= self.T0_Intv and self.ACF.Yield > 0:
             wt = scale_up(t, self.T0_Intv, self.T1_Intv)
             n2detect = self.ACF.Yield * wt
 
@@ -52,44 +52,18 @@ class Intervention(BaseModel):
                 detectable = p_tb.sum() + p_nontb.sum()
                 r_acf = n2detect / detectable * np.ones(2)
 
-            r_acf[r_acf > 5] = 5
-            r_acf = r_acf.reshape((1, -1))
-
             type = self.ACF.Type
 
-            sens = np.array([
-                pars[f'sens_acf_sn_{type}'], pars[f'sens_acf_sp_{type}'],
-                pars[f'sens_acf_sn_{type}'], pars[f'sens_acf_sp_{type}']
-            ]).reshape((-1, 1))
+            sens = np.array([pars[f'sens_acf_sn_{type}'], pars[f'sens_acf_sp_{type}']])
 
             spec = pars[f'spec_acf_{type}']
             p_dst = pars[f'p_dst_acf_{type}']
 
             p_dst = wt * p_dst
-            r_acf_tp = r_acf * sens
-            r_acf_fp = r_acf * (1 - spec)
+            r_acf_tp = r_acf.reshape((-1, 2)) * sens.reshape((2, -1))
+            r_acf_tp[r_acf_tp > 20] = 20
 
-        # if self.ACFPlain.R_ACF > 0:
-        #     r_acf0 = self.ACFPlain.R_ACF
-        #     type = self.ACFPlain.Type
-        #
-        #     sens = np.array([
-        #         pars[f'sens_acf_sn_{type}'], pars[f'sens_acf_sp_{type}'],
-        #         pars[f'sens_acf_sn_{type}'], pars[f'sens_acf_sp_{type}']
-        #     ]).reshape((-1, 1))
-        #     p_dst = pars[f'p_dst_acf_{type}']
-        #
-        #     p_dst = p_dst
-        #     r_acf = r_acf0 * sens
-        #
-        #     if np.any(r_acf > 0):
-        #         if self.ACFPlain.Focus:
-        #             r_acf_low = np.zeros((4, 1))
-        #         else:
-        #             r_acf_low = r_acf
-        #         r_acf = np.concatenate([r_acf_low, r_acf], axis=1)
-        #
-        #     return r_acf0, r_acf, p_dst
+            r_acf_fp = r_acf * (1 - spec)
 
         return r_acf, r_acf_tp, r_acf_fp, p_dst
 

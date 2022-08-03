@@ -1,3 +1,5 @@
+from abc import ABCMeta, abstractmethod
+
 __author__ = 'Chu-Chang Ku'
 __all__ = ['Process']
 
@@ -9,5 +11,10 @@ class Process:
     def __call__(self, t, y, pars, intv, calc):
         pass
 
-    def measure(self, t, y, pars, intv, calc, mea):
+    @abstractmethod
+    def calc_dy(self, t, y, pars, intv):
+        pass
+
+    @abstractmethod
+    def measure(self, t, y, pars, intv, mea):
         pass
