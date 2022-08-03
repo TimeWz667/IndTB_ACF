@@ -1,10 +1,12 @@
-from sim import load_inputs, Objective
-from sim.dy import Model, get_bn
+from sim.inputs import load_inputs
+from sim.dy import Model
+from bn.prior import get_bn
+from bn.obj import Objective
 
 
 inputs = load_inputs('../data/pars.json')
 m = Model(inputs, year0=1970)
-bn = get_bn('../prior')
+bn = get_bn('../bn/prior')
 
 
 def fn_post(p, m):
@@ -23,25 +25,17 @@ if __name__ == '__main__':
     smc = ApproxBayesComSMC(max_round=60, n_collect=300, n_core=5, verbose=8)
 
     scs = [
-        (4.3, 0.1785, 'sc1-1'),
-        (2.91, 0.1785, 'sc1-2'),
-        (2.38, 0.1785, 'sc1-3'),
-        (34.7, 0.007, 'sc2-1'),
-        (6.61, 0.007, 'sc2-2'),
-        (4.92, 0.007, 'sc2-3'),
+        (0.1785, 'sc1'),
+        (0.007, 'sc2'),
     ]
 
-    for or_comorb, pr, title in scs:
+    for pr, title in scs:
         out_path = f'../out/dy_{title}'
         os.makedirs(out_path, exist_ok=True)
         exo = {
             'p_comorb': pr
         }
-        to_fit = Objective(bn=bn,
-                           model=m,
-                           filepath_targets='../data/Targets.json',
-                           or_prev=or_comorb,
-                           exo=exo)
+        to_fit = Objective(bn=bn, model=m, filepath_targets='../data/Targets.json', exo=exo)
 
         smc.fit(to_fit)
 
@@ -65,12 +59,7 @@ if __name__ == '__main__':
         mss = [ms for _, ms, _ in rss]
         pss = [ps for _, _, ps in rss]
 
-        mss = bind_results(mss, or_comorb=or_comorb, pr_tb=pr)
+        mss = bind_results(mss, p_comorb=pr)
         mss.to_csv(f'{out_path}/Runs_Post.csv')
 
         pd.DataFrame(pss).to_csv(f'{out_path}/Post_full.csv')
-
-        res = [{'y0': list(ys.y[:, -1]), 'pars': pars} for pars, ys in zip(pss, yss)]
-
-        with open(f'{out_path}/y0_national.pkl', 'wb') as f:
-            pkl.dump(res, f)

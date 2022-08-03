@@ -1,10 +1,12 @@
-from sim import load_inputs, Objective
-from sim.dy import Model, get_bn
+from sim.inputs import load_inputs
+from sim.dy import Model
+from bn.prior import get_bn
+from bn.obj import Objective
 
 
 inputs = load_inputs('../data/pars.json')
 m = Model(inputs, year0=1970)
-bn = get_bn('../prior')
+bn = get_bn('../bn/prior')
 
 
 def fn_post(p, m):
@@ -25,10 +27,7 @@ if __name__ == '__main__':
     out_path = f'../out/dy'
     os.makedirs(out_path, exist_ok=True)
 
-    to_fit = Objective(bn=bn,
-                       model=m,
-                       filepath_targets='../data/Targets.json',
-                       or_prev=None)
+    to_fit = Objective(bn=bn, model=m, filepath_targets='../data/Targets.json')
 
     smc.fit(to_fit)
 
@@ -56,8 +55,3 @@ if __name__ == '__main__':
     mss.to_csv(f'{out_path}/Runs_Post.csv')
 
     pd.DataFrame(pss).to_csv(f'{out_path}/Post_full.csv')
-
-    res = [{'y0': list(ys.y[:, -1]), 'pars': pars} for pars, ys in zip(pss, yss)]
-
-    with open(f'{out_path}/y0_national.pkl', 'wb') as f:
-        pkl.dump(res, f)

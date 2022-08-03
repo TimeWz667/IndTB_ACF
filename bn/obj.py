@@ -11,7 +11,7 @@ __all__ = ['Objective']
 
 
 class Objective(AbsObjectiveSimBased):
-    def __init__(self, model, bn, filepath_targets, or_prev=1, exo=None):
+    def __init__(self, model, bn, filepath_targets, or_prev=None, exo=None):
         AbsObjectiveSimBased.__init__(self, bn, exo=exo)
         self.Model = model
         self.Data = dict()
