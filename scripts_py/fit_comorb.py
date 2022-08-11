@@ -20,9 +20,8 @@ if __name__ == '__main__':
     from joblib import Parallel, delayed
     from sim.util import bind_results
     import pandas as pd
-    import pickle as pkl
 
-    smc = ApproxBayesComSMC(max_round=60, n_collect=300, n_core=5, verbose=8)
+    smc = ApproxBayesComSMC(max_round=40, n_collect=500, n_core=5, verbose=8)
 
     scs = [
         (0.1785, 'sc1'),
