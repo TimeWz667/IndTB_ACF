@@ -208,7 +208,7 @@ class Cascade(Process):
         I = self.Keys
 
         # ACF
-        r_acf0, r_acf_tp, r_acf_fp, p_dst = 0, 0, 0, 0
+        r_acf0, r_acf_tp, r_acf_fp, p_dst = 0, np.zeros((2, 2)), 0, 0
         n_nontb = pars['NonTB'] * y.sum(0) if 'NonTB' in pars else 0
         n_tb = y[I.Sym].sum(0) + y[I.ExSym].sum(0)
         n = y.sum()

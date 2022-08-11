@@ -10,10 +10,10 @@ targets <- jsonlite::read_json(here::here("data", "targets.json"))
 targets <- bind_rows(targets$All) %>% filter(Index %in% c("Prev", "ARTI", "PrSym"))
 
 
-pars <- read_csv(here::here("out", "dy", "Post.csv")) %>% 
+pars <- read_csv(here::here("out", "dy_free", "Post.csv")) %>% 
   rename(Key = `...1`)
 
-sims <- read_csv(here::here("out", "dy", "Runs_Post.csv")) %>% 
+sims <- read_csv(here::here("out", "dy_free", "Runs_Post.csv")) %>% 
   mutate(Year = Time + 0.5)
 
 

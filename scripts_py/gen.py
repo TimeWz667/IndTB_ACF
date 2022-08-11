@@ -6,37 +6,37 @@ inputs = load_inputs('../data/pars.json')
 m = Model(inputs, year0=1970)
 
 
-def fn_post(p, m):
-    ys, ms, msg = m.simulate(p)
-    if ms is not None:
-        print(ms.PrDR_Inc[2020])
-    return ys, ms, msg['pars'] if 'pars' in msg else dict()
+def fn_post(p, m: Model):
+    ys, ms, _ = m.simulate_to_baseline(p, 2022)
+    return ys, ms
 
 
 if __name__ == '__main__':
     from joblib import Parallel, delayed
-    from sim.util import save_results
     import pandas as pd
     import pickle as pkl
+    import os
 
-    out_path = '../out/DR'
+    ds = os.listdir('../out')
+    ds = [d for d in ds if d.startswith('dy_')]
+    print(ds)
 
-    # Posterior run
-    post = [dict(row) for _, row in pd.read_csv(f'{out_path}/Post.csv').iterrows()]
+    for d in ds:
+        print(d)
+        out_path = f'../out/{d}'
 
-    with Parallel(n_jobs=4, verbose=8) as parallel:
-        rss = parallel(delayed(fn_post)(pars, m) for pars in post)
+        # Posterior run
+        post = [dict(row) for _, row in pd.read_csv(f'{out_path}/Post.csv').iterrows()]
 
-    rss = [rs for rs in rss if rs[1] is not None]
+        with Parallel(n_jobs=4, verbose=8) as parallel:
+            rss = parallel(delayed(fn_post)(pars, m) for pars in post)
 
-    yss = [ys for ys, _, _ in rss]
-    mss = [ms for _, ms, _ in rss]
-    pss = [ps for _, _, ps in rss]
+        rss = [rs for rs in rss if rs[1] is not None]
 
-    save_results(mss, f'{out_path}/Runs_Post.csv')
-    pd.DataFrame(pss).to_csv(f'{out_path}/Post_full.csv')
+        yss = [ys for ys, _ in rss]
+        mss = [ms for _, ms in rss]
 
-    res = [{'y0': list(ys.y[:, -1]), 'pars': pars} for pars, ys in zip(pss, yss)]
+        res = [{'y0': ys, 'pars': pars} for pars, ys in zip(post, yss)]
 
-    # with open(f'{out_path}/y0_national.pkl', 'wb') as f:
-    #     pkl.dump(res, f)
+        with open(f'{out_path}/y0s.pkl', 'wb') as f:
+            pkl.dump(res, f)
