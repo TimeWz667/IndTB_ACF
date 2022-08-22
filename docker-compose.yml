@@ -1,7 +1,7 @@
 version:                "3"
 services:
   acf:
-      image:            modelpymc:latest
+      image:            pymc_acf:latest
       volumes:
         - D:\Projects\IndiaTB\IndTB_ACF\notebooks:/home/jovyan/work
         - D:\Projects\IndiaTB\IndTB_ACF\data:/home/jovyan/work/data
@@ -9,5 +9,5 @@ services:
         - D:\Projects\IndiaTB\IndTB_ACF\sim:/home/jovyan/work/sim
         - D:\Projects\IndiaTB\IndTB_ACF\mc:/home/jovyan/work/mc
       ports:
-        - 8787:8787
+        - 1167:1167
       container_name:   acf

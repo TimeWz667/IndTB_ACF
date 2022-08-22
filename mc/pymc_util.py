@@ -49,7 +49,8 @@ class DataModel:
 
         self.FreeParameters = [p.name for p in ps]
 
-    def define_prior(self, dm):
+    @staticmethod
+    def define_prior(dm):
         with dm:
             p_comorb = pm.Uniform('p_comorb', 0, 0.5)
             rr_risk_comorb = pm.Uniform('rr_risk_comorb', 1, 30)
@@ -102,23 +103,20 @@ class DataModel:
         return dm
 
 
-def post_to_particles(post):
-    po = post.posterior.stack(samples=("draw", "chain"))
-
+def _to_particles(po):
     variables = list(po.variables.keys())
     variables = [v for v in variables if v != 'samples']
     vs = {k: po[k].to_numpy() for k in variables}
     n_samples = len(vs[variables[0]])
-    pts = [{k: v[i] for k, v in vs.items() if k not in ['chain', 'draw']} for i in range(n_samples)]
+    pts = [{k: v[i] for k, v in vs.items()} for i in range(n_samples)]
     return pts
+
+
+def post_to_particles(post):
+    po = post.posterior.stack(samples=("draw", "chain"))
+    return _to_particles(po)
 
 
 def prior_to_particles(prior):
     po = prior.prior.stack(samples=("draw", "chain"))
-
-    variables = list(po.variables.keys())
-    variables = [v for v in variables if v != 'samples']
-    vs = {k: po[k].to_numpy() for k in variables}
-    n_samples = len(vs[variables[0]])
-    pts = [{k: v[i] for k, v in vs.items() if k not in ['chain', 'draw']} for i in range(n_samples)]
-    return pts
+    return _to_particles(po)
