@@ -273,6 +273,9 @@ class Cascade(Process):
 
         det = det_pub + det_pri + det_acf
 
+        fil = lambda x: x[0] in I.Infectious_DR and x[3] == 'pcf_pub'
+        det_dr = np.array([extract_tr(y[:, 0], trs_l, fil), extract_tr(y[:, 1], trs_h, fil)])
+
         ns = y.sum(0)
         n = ns.sum()
 
@@ -283,6 +286,7 @@ class Cascade(Process):
         mea['TP_Acf'] = det_acf.sum() / n
         mea['N_Pub_Detected'] = det_pub.sum()
         mea['N_Pri_Detected'] = det_pri.sum()
+        mea['PrDR_CNR'] = det_dr.sum() / max(det_pub.sum(), 1e-10)
 
         if 'r_acf_fp' in rates and 'NonTB' in pars:
             n_tb = y[I.Sym].sum(0) + y[I.ExSym].sum(0)

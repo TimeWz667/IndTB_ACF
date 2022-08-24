@@ -67,13 +67,13 @@ class DataModel:
             r_onset_sp = pm.Triangular('r_onset_sp', lower=1.02, c=1.24, upper=1.65)
             r_onset_sn = pm.Triangular('r_onset_sn', lower=1.9, c=2.37, upper=3.05)
 
-            r_convert_a = pm.Triangular('r_convert_a', lower=0.62, c=0.63, upper=0.64)
-            r_convert_s = pm.Triangular('r_convert_s', lower=0.4, c=0.71, upper=1.04)
+            r_convert_a = pm.Uniform('r_convert_a', lower=0, upper=0.5)
+            r_convert_s = pm.Uniform('r_convert_s', lower=0, upper=0.5)
 
             r_clear = pm.Uniform('r_clear', 0.02, 0.04)
 
-            r_cs_s = pm.Triangular('r_cs_s', lower=0.57, upper=0.91, c=0.73)
-            r_cs_c = pm.Triangular('r_cs_c', lower=9, upper=15, c=12)
+            r_cs_s = pm.Uniform('r_cs_s', lower=1, upper=15)
+            r_cs_c = pm.Uniform('r_cs_c', lower=1, upper=15)
 
             return (p_comorb, rr_risk_comorb, beta_ds, rr_beta_dr, rr_inf_asym, rr_inf_sn,
                     red_sus, rr_sus_ltbi,
@@ -105,7 +105,7 @@ class DataModel:
 
 def _to_particles(po):
     variables = list(po.variables.keys())
-    variables = [v for v in variables if v != 'samples']
+    variables = [v for v in variables if v not in ['samples', 'draw', 'chain']]
     vs = {k: po[k].to_numpy() for k in variables}
     n_samples = len(vs[variables[0]])
     pts = [{k: v[i] for k, v in vs.items()} for i in range(n_samples)]

@@ -200,14 +200,17 @@ class Progression(Process):
         prev_a = y[I.Asym].sum(0)
         prev_s = y[I.Sym].sum(0)
         prev_c = y[I.ExSym].sum(0)
-        prev_sym = prev_s + prev_c
+
         prev = prev_a + prev_s + prev_c
         mea['Prev'] = prev.sum() / n
         mea['N_UT'] = prev.sum()
-        mea['PrSym'] = prev_sym.sum() / prev.sum()
+        mea['PrAsym'] = prev_a.sum() / prev.sum()
+        mea['PrPreCS'] = prev_s.sum() / prev.sum()
+        mea['PrExCS'] = prev_c.sum() / prev.sum()
 
         mea['PrSp_Asym'] = y[I.Asym][[1, 3]].sum() / prev_a.sum()
-        mea['PrSp_Sym'] = (y[I.Sym] + y[I.ExSym])[[1, 3]].sum() / max(prev_sym.sum(), 1e-10)
+        mea['PrSp_PreCS'] = y[I.Sym][[1, 3]].sum() / max(prev_s.sum(), 1e-10)
+        mea['PrSp_ExCS'] = y[I.ExSym][[1, 3]].sum() / max(prev_c.sum(), 1e-10)
 
         ltbi = y[I.LTBI].sum(0)
         mea['LTBI'] = ltbi.sum() / n

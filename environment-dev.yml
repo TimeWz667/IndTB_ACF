@@ -1,5 +1,4 @@
-channels:
-
 dependencies:
 - pydantic
 - numba
+- joblib

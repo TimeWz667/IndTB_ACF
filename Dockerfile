@@ -1,6 +1,6 @@
 FROM pymc/pymc:latest
 # Adapted from pymc/pymc
-LABEL name="pymc_acf"
+LABEL name="acf-dev"
 LABEL description="Environment for ACF model with PyMC version 4"
 
 

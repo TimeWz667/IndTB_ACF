@@ -90,19 +90,13 @@ class Model:
         if 'sus' not in p:
             p = self.update_parameters(p)
 
-        t_start = 2006
+        t_start = 2020
         y0 = self.get_y0(p).reshape(-1)
         ys0 = solve_ivp(self, [t_start - 300, t_start], y0, args=(p,), events=self.dfe, method='RK23')
         if len(ys0.t_events[0]) > 0 or not ys0.success:
             return None, None, {'succ': False, 'res': 'DFE reached'}
 
-        y1 = ys0.y[:, -1]
-        ys = solve_ivp(self, [t_start, 2018], y1, args=(p, ), events=self.dfe, method='RK23', dense_output=True)
-        if len(ys.t_events[0]) > 0 or not ys.success:
-            return None, None, {'succ': False, 'res': 'DFE reached'}
-
-        mea = [self.measure(t, ys.sol(t), p) for t in [2006, 2012, 2018]]
-        return ys, mea, {'succ': True}
+        return ys0, self.measure(t_start, ys0.y[:, -1], p), {'succ': True}
 
     def simulate_to_baseline(self, p, t_start=2022):
         if 'sus' not in p:
@@ -173,6 +167,9 @@ if __name__ == '__main__':
 
     p0 = prior[0]
     p0.update({'beta_ds': 15, 'rr_risk_comorb': 20, 'rr_beta_dr': 1.05, 'p_comorb': 0.3})
+
+    _, ms, _ = m.simulate_to_fit(p0)
+    print(ms)
 
     y1, ms, msg = m.simulate_to_baseline(p0, 2022)
 

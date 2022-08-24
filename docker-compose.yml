@@ -1,7 +1,7 @@
 version:                "3"
 services:
   acf:
-      image:            pymc_acf:latest
+      image:            acf-dev:latest
       volumes:
         - D:\Projects\IndiaTB\IndTB_ACF\notebooks:/home/jovyan/work
         - D:\Projects\IndiaTB\IndTB_ACF\data:/home/jovyan/work/data
