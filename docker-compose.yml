@@ -3,11 +3,11 @@ services:
   acf:
       image:            acf-dev:latest
       volumes:
-        - D:\Projects\IndiaTB\IndTB_ACF\notebooks:/home/jovyan/work
-        - D:\Projects\IndiaTB\IndTB_ACF\data:/home/jovyan/work/data
-        - D:\Projects\IndiaTB\IndTB_ACF\out:/home/jovyan/work/out
-        - D:\Projects\IndiaTB\IndTB_ACF\sim:/home/jovyan/work/sim
-        - D:\Projects\IndiaTB\IndTB_ACF\mc:/home/jovyan/work/mc
+        - ./notebooks:/home/jovyan/work
+        - ./data:/home/jovyan/work/data
+        - ./out:/home/jovyan/work/out
+        - ./sim:/home/jovyan/work/sim
+        - ./mc:/home/jovyan/work/mc
       ports:
         - 1167:1167
       container_name:   acf
