@@ -10,7 +10,6 @@ class DataModel:
         'p_primary': 0.14,
         'r_react': 0.001,
         'r_stab': 0.5,
-        'p_sp0': 0.6,
         'r_sc': 0.2,
         'r_die_ut': 0.2,
         'p_entry_pri': 0.5,
@@ -57,29 +56,28 @@ class DataModel:
             beta_ds = pm.Uniform('beta_ds', 1, 15)
             rr_beta_dr = pm.Uniform('rr_beta_dr', 0.9, 1.1)
             rr_inf_asym = pm.Uniform('rr_inf_asym', 0, 1)
-            rr_inf_sn = pm.Uniform('rr_inf_sn', 0.1, 0.3)
+            # rr_inf_sn = pm.Uniform('rr_inf_sn', 0.1, 0.3)
             red_sus = pm.Uniform('red_sus', 0.15, 0.25)
             rr_sus_ltbi = pm.Uniform('rr_sus_ltbi', 0.15, 0.25)
             r_relapse_td = pm.Triangular('r_relapse_td', lower=0.105, c=0.14, upper=0.175)
             r_relapse_tc = pm.Triangular('r_relapse_tc', lower=0.024, c=0.032, upper=0.04)
             r_relapse_st = pm.Triangular('r_relapse_st', lower=0.0011, c=0.0019, upper=0.002)
 
-            r_onset_sp = pm.Triangular('r_onset_sp', lower=1.02, c=1.24, upper=1.65)
-            r_onset_sn = pm.Triangular('r_onset_sn', lower=1.9, c=2.37, upper=3.05)
-
-            r_convert_a = pm.Uniform('r_convert_a', lower=0, upper=0.5)
-            r_convert_s = pm.Uniform('r_convert_s', lower=0, upper=0.5)
+            r_onset = pm.Uniform('r_onset', lower=0.5, upper=5)
+            # r_onset_sn = pm.Triangular('r_onset_sn', lower=1.9, c=2.37, upper=3.05)
+            #
+            # r_convert_a = pm.Uniform('r_convert_a', lower=0, upper=0.5)
+            # r_convert_s = pm.Uniform('r_convert_s', lower=0, upper=0.5)
 
             r_clear = pm.Uniform('r_clear', 0.02, 0.04)
 
             r_cs_s = pm.Uniform('r_cs_s', lower=1, upper=15)
             r_cs_c = pm.Uniform('r_cs_c', lower=1, upper=15)
 
-            return (p_comorb, rr_risk_comorb, beta_ds, rr_beta_dr, rr_inf_asym, rr_inf_sn,
+            return (p_comorb, rr_risk_comorb, beta_ds, rr_beta_dr, rr_inf_asym,
                     red_sus, rr_sus_ltbi,
                     r_relapse_td, r_relapse_tc, r_relapse_st,
-                    r_onset_sp, r_onset_sn, r_convert_a, r_convert_s,
-                    r_clear, r_cs_s, r_cs_c)
+                    r_onset, r_clear, r_cs_s, r_cs_c)
 
     def serve(self, pars):
         pars = dict(pars)

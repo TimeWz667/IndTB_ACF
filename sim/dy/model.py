@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from sim.components import Demography, Transmission, Progression, Cascade
 from sim.intv import Intervention
-from sim.util import simulate, update
+from sim.util import simulate
 import sim.dy.keys as I
 from scipy.integrate import solve_ivp
 
@@ -31,16 +31,13 @@ class Model:
         sus[I.RLow] = pars['rr_sus_ltbi']
         sus[I.RHigh] = pars['rr_sus_ltbi']
         sus[I.RSt] = pars['rr_sus_ltbi']
-        # sus[: I.RiskHi] *= pars['rr_risk_comorb']
 
         pars['trans_ds'] = trans = np.zeros((I.N_State_TB, I.N_State_Strata))
-        trans[I.Infectious_Sn_DS] = pars['rr_inf_sn']
-        trans[I.Infectious_Sp_DS] = 1
+        trans[I.Infectious_DS] = 1
         trans[I.Asym] *= pars['rr_inf_asym']
 
         pars['trans_dr'] = trans = np.zeros((I.N_State_TB, I.N_State_Strata))
-        trans[I.Infectious_Sn_DR] = pars['rr_inf_sn']
-        trans[I.Infectious_Sp_DR] = 1
+        trans[I.Infectious_DR] = 1
         trans[I.Asym] *= pars['rr_inf_asym']
 
         pars['beta_dr'] = pars['beta_ds'] * pars['rr_beta_dr']
@@ -52,7 +49,7 @@ class Model:
         p_hi = pars['p_comorb']
         n0 = np.array([1 - p_hi, p_hi]) * self.Inputs['N0']
 
-        y0[I.Sym_Sp_DS] = 1e-2 * n0
+        y0[I.Sym_DS] = 1e-2 * n0
         y0[I.SLat_DS] = 0.4 * n0
         y0[I.U] = n0 - y0.sum(0)
         return y0

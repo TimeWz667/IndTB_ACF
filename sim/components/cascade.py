@@ -142,7 +142,7 @@ class Cascade(Process):
         p_tr_pub = pars['p_tr_pub']
 
         for sym, cs, txf_pub, txf_pri, txs_pub in zip(I.Sym, I.ExSym, I.Txf_Pub, I.Txf_Pri, I.Txs_Pub):
-            ds = sym in I.Sym_DS
+            ds = sym is I.Sym_DS
 
             # PCF
             if ds:

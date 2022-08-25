@@ -39,22 +39,16 @@ class Transmission(Process):
         inf = inf_ds + inf_dr
 
         ltbi = y[I.LTBI].sum(0)
-        prev_a = y[I.Asym].sum(0)
-        prev_s = y[I.Sym].sum(0)
-        prev_c = y[I.ExSym].sum(0)
-        prev = prev_a + prev_s + prev_c
 
         ns = y.sum(0)
         n = ns.sum()
 
-        mea['Prev'] = prev.sum() / n
         mea['ARTI'] = inf.sum() / n
         mea['LTBI'] = ltbi.sum() / n
 
         for i, strata in enumerate(I.Tag_Strata):
             n = max(ns[i], 1e-15)
 
-            mea[f'Prev_{strata}'] = prev[i] / n
             mea[f'ARTI_{strata}'] = inf[i] / n
             mea[f'LTBI_{strata}'] = ltbi[i] / n
 
