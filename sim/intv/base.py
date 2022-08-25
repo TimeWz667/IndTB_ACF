@@ -14,20 +14,6 @@ def scale_up(t, t0, t1):
     return (t - t0) / (t1 - t0)
 
 
-# class ACF(BaseModel):
-#     Scale: confloat(ge=0, le=1) = 0
-#     Type: str = 'mod'
-#     SensDx: confloat(ge=0, le=1) = 0
-#     PrDST: confloat(ge=0, le=1) = 0
-#     SensScreen: confloat(ge=0, le=1) = 0
-
-#
-# class ACFPlain(BaseModel):
-#     R_ACF: confloat(ge=0) = 0
-#     Type: str = 'mod'
-#     Focus: bool = True
-
-
 class ACF(BaseModel):
     Yield: confloat(ge=0, le=2) = 0
     Type: str = 'mod'
@@ -75,5 +61,3 @@ if __name__ == '__main__':
 
     intv = Intervention.parse_obj(intv_list)
     print(intv.json())
-
-

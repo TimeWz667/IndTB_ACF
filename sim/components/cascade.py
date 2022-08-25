@@ -13,106 +13,6 @@ class Cascade(Process):
         self.T0_DOTS = 1990
         self.T1_DOTS = 2007
 
-    def __call__(self, t, y, pars, intv, calc):
-        I = self.Keys
-
-        r_cs_s, r_cs_c = pars['r_cs_s'], pars['r_cs_c']
-
-        p_entry_pri = pars['p_entry_pri']
-        p_entry_pub = 1 - p_entry_pri
-
-        if t < self.T0_DOTS:
-            p_entry_pub, p_entry_pri = 0, 1
-        elif t < self.T1_DOTS:
-            p_entry_pub *= (t - self.T0_DOTS) / (self.T1_DOTS - self.T0_DOTS)
-            p_entry_pri = 1 - p_entry_pub
-
-        p_dx_pub, p_dx_pri = pars['p_dx_pub'], pars['p_dx_pri']
-
-        p_dst = pars['p_dst_pcf']
-        p_dst_pub = np.array([0, 0, p_dst, p_dst]).reshape((-1, 1))
-
-        p_txf_pub, p_txf_pri = pars['p_txf_pub'], pars['p_txf_pri']
-        p_txs_pub, p_txs_pri = pars['p_txs_pub'], pars['p_txs_pri']
-
-        p_txi = p_dx_pub * (1 - p_dst_pub) * p_txf_pub
-        calc['det_txf_pub_s'] = r_cs_s * p_entry_pub * p_txi * y[I.Sym]
-        calc['det_txf_pub_c'] = r_cs_c * p_entry_pub * p_txi * y[I.ExSym]
-
-        p_txi = p_dx_pub * p_dst_pub * p_txs_pub
-        calc['det_txs_pub_s'] = r_cs_s * p_entry_pub * p_txi * y[I.Sym]
-        calc['det_txs_pub_c'] = r_cs_c * p_entry_pub * p_txi * y[I.ExSym]
-
-        p_txi = p_dx_pri * p_txf_pri
-        calc['det_txf_pri_s'] = r_cs_s * p_entry_pri * p_txi * y[I.Sym]
-        calc['det_txf_pri_c'] = r_cs_c * p_entry_pri * p_txi * y[I.ExSym]
-
-        p_txi = p_dx_pub * p_txf_pub
-        calc['fn_pub_s'] = r_cs_s * p_entry_pub * (1 - p_txi) * y[I.Sym]
-        calc['fn_pub_c'] = r_cs_c * p_entry_pub * (1 - p_txi) * y[I.ExSym]
-
-        p_txi = p_dx_pri * p_txf_pri
-        calc['fn_pri_s'] = r_cs_s * p_entry_pri * (1 - p_txi) * y[I.Sym]
-        calc['fn_pri_c'] = r_cs_c * p_entry_pri * (1 - p_txi) * y[I.ExSym]
-
-        # ACF
-        r_acf, r_acf_tp, r_acf_fp, p_dst = 0, 0, 0, 0
-        n_nontb = pars['NonTB'] * y.sum(0) if 'NonTB' in pars else 0
-        n_tb = y[I.Sym].sum(0) + y[I.ExSym].sum(0)
-        n = y.sum()
-        if intv is not None and t > intv.T0_Intv:
-            r_acf, r_acf_tp, r_acf_fp, p_dst = \
-                intv.modify_acf(t, r_acf, r_acf_tp, r_acf_fp, p_dst, pars, n_tb / n, n_nontb / n)
-
-        p_dst_acf = np.array([0, 0, p_dst, p_dst]).reshape((-1, 1))
-
-        calc['r_acf'] = r_acf
-        calc['r_acf_fp'] = r_acf_fp
-
-        calc['acf_s'] = r_acf * y[I.Sym]
-        calc['acf_c'] = r_acf * y[I.ExSym]
-
-        calc['acf_txf_pub_s'] = r_acf_tp * (1 - p_dst_acf) * y[I.Sym]
-        calc['acf_txf_pub_c'] = r_acf_tp * (1 - p_dst_acf) * y[I.ExSym]
-        calc['acf_txs_pub_s'] = r_acf_tp * p_dst_acf * y[I.Sym]
-        calc['acf_txs_pub_c'] = r_acf_tp * p_dst_acf * y[I.ExSym]
-
-        # ACF non-TB population
-        n_nontb = pars['NonTB'] * y.sum(0, keepdims=True) if 'NonTB' in pars else np.zeros(2)
-        calc['acf_nontb'] = n_nontb * r_acf
-        calc['acf_tx_fp'] = n_nontb * r_acf_fp
-
-        # Tx
-        r_succ_txf_pub, r_succ_txf_pri = pars['r_succ_txf_pub'], pars['r_succ_txf_pri']
-        r_succ_txs_pub, r_succ_txs_pri = pars['r_succ_txs_pub'], pars['r_succ_txs_pri']
-        r_ltfu_txf_pub, r_ltfu_txf_pri = pars['r_ltfu_txf_pub'], pars['r_ltfu_txf_pri']
-        r_ltfu_txs_pub, r_ltfu_txs_pri = pars['r_ltfu_txs_pub'], pars['r_ltfu_txs_pri']
-
-        if t < self.T0_Rif:
-            calc['tx_succ_txf_pub'] = r_succ_txf_pub * y[I.Txf_Pub]
-            calc['tx_succ_txf_pri'] = r_succ_txf_pri * y[I.Txf_Pri]
-            calc['tx_succ_txs_pub'] = r_succ_txs_pub * y[I.Txs_Pub]
-            calc['tx_succ_txs_pri'] = r_succ_txs_pri * y[I.Txs_Pri]
-
-            calc['tx_ltfu_txf_pub'] = r_ltfu_txf_pub * (1 - pars['p_tr_pub']) * y[I.Txf_Pub]
-            calc['tx_ltfu_txf_pri'] = r_ltfu_txf_pri * y[I.Txf_Pri]
-            calc['tx_ltfu_txs_pub'] = r_ltfu_txs_pub * y[I.Txs_Pub]
-            calc['tx_ltfu_txs_pri'] = r_ltfu_txs_pri * y[I.Txs_Pri]
-
-            calc['tx_switch_pub'] = r_ltfu_txf_pub * pars['p_tr_pub'] * y[I.Txf_Pub]
-        else:
-            calc['tx_succ_txf_pub'] = 0 * y[I.Txf_Pub]
-            calc['tx_succ_txf_pri'] = 0 * y[I.Txf_Pri]
-            calc['tx_succ_txs_pub'] = 0 * y[I.Txs_Pub]
-            calc['tx_succ_txs_pri'] = 0 * y[I.Txs_Pri]
-
-            calc['tx_ltfu_txf_pub'] = (r_succ_txf_pub + r_ltfu_txf_pub) * y[I.Txf_Pub]
-            calc['tx_ltfu_txf_pri'] = (r_succ_txf_pri + r_ltfu_txf_pri) * y[I.Txf_Pri]
-            calc['tx_ltfu_txs_pub'] = (r_succ_txs_pub + r_ltfu_txs_pub) * y[I.Txs_Pub]
-            calc['tx_ltfu_txs_pri'] = (r_succ_txs_pri + r_ltfu_txs_pri) * y[I.Txs_Pri]
-
-            calc['tx_switch_pub'] = 0 * y[I.Txf_Pub]
-
     def get_trs(self, t, y, pars, intv):
         I = self.Keys
 
@@ -218,34 +118,22 @@ class Cascade(Process):
                                                             pars, p_tb, p_nontb)
 
         trs_l = [
-            (I.Sym_Sn_DS, I.Txf_Pub_Sn_DS, r_acf_tp[0, 0], 'acf'),
-            (I.Sym_Sp_DS, I.Txf_Pub_Sp_DS, r_acf_tp[1, 0], 'acf'),
-            (I.Sym_Sn_DR, I.Txf_Pub_Sn_DR, r_acf_tp[0, 0] * (1 - p_dst), 'acf'),
-            (I.Sym_Sp_DR, I.Txf_Pub_Sp_DR, r_acf_tp[1, 0] * (1 - p_dst), 'acf'),
-            (I.Sym_Sn_DR, I.Txs_Pub_Sn_DR, r_acf_tp[0, 0] * p_dst, 'acf'),
-            (I.Sym_Sp_DR, I.Txs_Pub_Sp_DR, r_acf_tp[1, 0] * p_dst, 'acf'),
+            (I.Sym_DS, I.Txf_Pub_DS, r_acf_tp[0, 0], 'acf'),
+            (I.Sym_DR, I.Txf_Pub_DR, r_acf_tp[0, 0] * (1 - p_dst), 'acf'),
+            (I.Sym_DR, I.Txs_Pub_DR, r_acf_tp[0, 0] * p_dst, 'acf'),
 
-            (I.ExSym_Sn_DS, I.Txf_Pub_Sn_DS, r_acf_tp[0, 0], 'acf'),
-            (I.ExSym_Sp_DS, I.Txf_Pub_Sp_DS, r_acf_tp[1, 0], 'acf'),
-            (I.ExSym_Sn_DR, I.Txf_Pub_Sn_DR, r_acf_tp[0, 0] * (1 - p_dst), 'acf'),
-            (I.ExSym_Sp_DR, I.Txf_Pub_Sp_DR, r_acf_tp[1, 0] * (1 - p_dst), 'acf'),
-            (I.ExSym_Sn_DR, I.Txs_Pub_Sn_DR, r_acf_tp[0, 0] * p_dst, 'acf'),
-            (I.ExSym_Sp_DR, I.Txs_Pub_Sp_DR, r_acf_tp[1, 0] * p_dst, 'acf'),
+            (I.ExSym_DS, I.Txf_Pub_DS, r_acf_tp[0, 0], 'acf'),
+            (I.ExSym_DR, I.Txf_Pub_DR, r_acf_tp[0, 0] * (1 - p_dst), 'acf'),
+            (I.ExSym_DR, I.Txs_Pub_DR, r_acf_tp[0, 0] * p_dst, 'acf'),
         ]
         trs_h = [
-            (I.Sym_Sn_DS, I.Txf_Pub_Sn_DS, r_acf_tp[0, 1], 'acf'),
-            (I.Sym_Sp_DS, I.Txf_Pub_Sp_DS, r_acf_tp[1, 1], 'acf'),
-            (I.Sym_Sn_DR, I.Txf_Pub_Sn_DR, r_acf_tp[0, 1] * (1 - p_dst), 'acf'),
-            (I.Sym_Sp_DR, I.Txf_Pub_Sp_DR, r_acf_tp[1, 1] * (1 - p_dst), 'acf'),
-            (I.Sym_Sn_DR, I.Txs_Pub_Sn_DR, r_acf_tp[0, 1] * p_dst, 'acf'),
-            (I.Sym_Sp_DR, I.Txs_Pub_Sp_DR, r_acf_tp[1, 1] * p_dst, 'acf'),
+            (I.Sym_DS, I.Txf_Pub_DS, r_acf_tp[0, 1], 'acf'),
+            (I.Sym_DR, I.Txf_Pub_DR, r_acf_tp[0, 1] * (1 - p_dst), 'acf'),
+            (I.Sym_DR, I.Txs_Pub_DR, r_acf_tp[0, 1] * p_dst, 'acf'),
 
-            (I.ExSym_Sn_DS, I.Txf_Pub_Sn_DS, r_acf_tp[0, 1], 'acf'),
-            (I.ExSym_Sp_DS, I.Txf_Pub_Sp_DS, r_acf_tp[1, 1], 'acf'),
-            (I.ExSym_Sn_DR, I.Txf_Pub_Sn_DR, r_acf_tp[0, 1] * (1 - p_dst), 'acf'),
-            (I.ExSym_Sp_DR, I.Txf_Pub_Sp_DR, r_acf_tp[1, 1] * (1 - p_dst), 'acf'),
-            (I.ExSym_Sn_DR, I.Txs_Pub_Sn_DR, r_acf_tp[0, 1] * p_dst, 'acf'),
-            (I.ExSym_Sp_DR, I.Txs_Pub_Sp_DR, r_acf_tp[1, 1] * p_dst, 'acf'),
+            (I.ExSym_DS, I.Txf_Pub_DS, r_acf_tp[0, 1], 'acf'),
+            (I.ExSym_DR, I.Txf_Pub_DR, r_acf_tp[0, 1] * (1 - p_dst), 'acf'),
+            (I.ExSym_DR, I.Txs_Pub_DR, r_acf_tp[0, 1] * p_dst, 'acf'),
         ]
 
         return trs_l, trs_h, {'r_acf0': r_acf0, 'r_acf_tp': r_acf_tp, 'r_acf_fp': r_acf_fp, 'p_dst': p_dst}

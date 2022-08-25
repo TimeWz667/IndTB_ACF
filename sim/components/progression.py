@@ -10,48 +10,6 @@ class Progression(Process):
     def __init__(self, keys):
         Process.__init__(self, keys)
 
-    def __call__(self, t, y, pars, intv, calc):
-        I = self.Keys
-
-        pr0 = pars['p_primary']
-        r_act = pars['r_stab'] * pr0 / (1 - pr0)
-
-        r_react = pars['r_react']
-        r_rel_st, r_rel_tc, r_rel_td = pars['r_relapse_st'], pars['r_relapse_tc'], pars['r_relapse_td']
-
-        risk_comorb = np.ones_like(y[I.SLat])
-        risk_comorb[:, I.RiskHi] *= pars['rr_risk_comorb']
-
-        calc['act'] = risk_comorb * r_act * y[I.FLat]
-        calc['react'] = risk_comorb * r_react * y[I.SLat]
-        calc['rel_tc'] = r_rel_tc * y[I.RLow]
-        calc['rel_td'] = r_rel_td * y[I.RHigh]
-        calc['rel_st'] = r_rel_st * y[I.RSt]
-
-        calc['inc_recent'] = calc['act']
-        calc['inc_remote'] = calc['react'] + calc['rel_tc'] + calc['rel_td'] + calc['rel_st']
-        calc['inc'] = calc['inc_recent'] + calc['inc_remote']
-
-        r_stab = pars['r_stab']
-        calc['stab_fl'] = r_stab * y[I.FLat]
-        calc['stab_tc'] = r_stab * y[I.RLow]
-        calc['stab_td'] = r_stab * y[I.RHigh]
-
-        calc['sc_a'] = pars['r_sc'] * y[I.Asym]
-        calc['sc_s'] = pars['r_sc'] * y[I.Sym]
-        calc['sc_c'] = pars['r_sc'] * y[I.ExSym]
-
-        calc['clear_sl'] = pars['r_clear'] * y[I.SLat]
-        calc['clear_rst'] = pars['r_clear'] * y[I.RSt]
-
-        r_onset = pars['r_onset']
-
-        calc['sym_onset'] = r_onset * y[I.Asym]
-
-        r_mdr_tx = pars['r_mdr_tx']
-        calc['develop_dr_pub'] = r_mdr_tx * y[[I.Txf_Pub_Sn_DS, I.Txf_Pub_Sp_DS]]
-        calc['develop_dr_pri'] = r_mdr_tx * y[[I.Txf_Pri_Sn_DS, I.Txf_Pri_Sp_DS]]
-
     def get_trs(self, t, y, pars, intv):
         I = self.Keys
 

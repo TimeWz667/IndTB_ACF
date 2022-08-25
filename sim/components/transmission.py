@@ -11,14 +11,14 @@ def infection(sus, trans, y):
 
 
 class Transmission(Process):
-    def __call__(self, t, y, pars, intv, calc):
+    def __call__(self, t, y, pars, calc):
         calc['infection_ds'] = infection(sus=pars['sus'], trans=pars['trans_ds'], y=y) * pars['beta_ds']
         calc['infection_dr'] = infection(sus=pars['sus'], trans=pars['trans_dr'], y=y) * pars['beta_dr']
 
     def calc_dy(self, t, y, pars, intv):
         I = self.Keys
         calc = dict()
-        self(t, y, pars, intv, calc)
+        self(t, y, pars, calc)
 
         dy = np.zeros_like(y)
 
@@ -32,7 +32,7 @@ class Transmission(Process):
     def measure(self, t, y, pars, intv, mea):
         I = self.Keys
         calc = dict()
-        self(t, y, pars, intv, calc)
+        self(t, y, pars, calc)
 
         inf_ds = calc['infection_ds'].sum(0)
         inf_dr = calc['infection_dr'].sum(0)
