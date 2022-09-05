@@ -47,6 +47,8 @@ Txf_Pub = [Txf_Pub_DS, Txf_Pub_DR]
 Txf_Pri = [Txf_Pri_DS, Txf_Pri_DR]
 Txs_Pub = [Txs_Pub_DS, Txs_Pub_DR]
 Txs_Pri = [Txs_Pri_DS, Txs_Pri_DR]
+Tx_DS = [Txf_Pub_DS, Txf_Pri_DS, Txs_Pub_DS, Txs_Pri_DS]
+Tx_DR = [Txf_Pub_DR, Txf_Pri_DR, Txs_Pub_DR, Txs_Pri_DR]
 
 FLat = [FLat_DS, FLat_DR]
 SLat = [SLat_DS, SLat_DR]

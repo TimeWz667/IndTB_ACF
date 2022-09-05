@@ -16,6 +16,8 @@ class Demography(Process):
         dr_tb[I.Asym] = pars['r_die_ut']
         dr_tb[I.Sym] = pars['r_die_ut']
         dr_tb[I.ExSym] = pars['r_die_ut']
+        dr_tb[I.Tx_DS] = pars['r_die_ds']
+        dr_tb[I.Tx_DR] = pars['r_die_dr']
 
         n = y.sum(0)
         calc['n'] = n

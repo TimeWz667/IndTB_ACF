@@ -31,14 +31,20 @@ class Cascade(Process):
 
         p_dx_pub, p_dx_pri = pars['p_dx_pub'], pars['p_dx_pri']
         p_dst = pars['p_dst_pcf']
-        p_txf_pub, p_txf_pri = pars['p_txf_pub'], pars['p_txf_pri']
-        p_txs_pub, p_txs_pri = pars['p_txs_pub'], pars['p_txs_pri']
+        p_txi = pars['p_txi']
 
-        r_succ_txf = pars['r_succ_txf']
-        r_ltfu_txf_pub = pars['r_succ_txf'] * (1 - pars['p_succ_txf_pub']) / pars['p_succ_txf_pub']
-        r_ltfu_txf_pri = pars['r_succ_txf'] * (1 - pars['p_succ_txf_pri']) / pars['p_succ_txf_pri']
-        r_succ_txs = pars['r_succ_txs']
-        r_ltfu_txs_pub = pars['r_succ_txs'] * (1 - pars['p_succ_txs_pub']) / pars['p_succ_txs_pub']
+        r_succ_fl_pub_ds = pars['r_succ_fl_pub_ds']
+        r_succ_fl_pri_ds = pars['r_succ_fl_pri_ds']
+        r_succ_fl_pub_dr = pars['r_succ_fl_pub_dr']
+        r_succ_fl_pri_dr = pars['r_succ_fl_pri_dr']
+        r_succ_sl_pub_dr = pars['r_succ_sl_pub_dr']
+
+        r_ltfu_fl_pub_ds = pars['r_ltfu_fl_pub_ds']
+        r_ltfu_fl_pri_ds = pars['r_ltfu_fl_pri_ds']
+        r_ltfu_fl_pub_dr = pars['r_ltfu_fl_pub_dr']
+        r_ltfu_fl_pri_dr = pars['r_ltfu_fl_pri_dr']
+        r_ltfu_sl_pub_dr = pars['r_ltfu_sl_pub_dr']
+
         p_tr_pub = pars['p_tr_pub']
 
         for sym, cs, txf_pub, txf_pri, txs_pub in zip(I.Sym, I.ExSym, I.Txf_Pub, I.Txf_Pri, I.Txs_Pub):
@@ -47,49 +53,62 @@ class Cascade(Process):
             # PCF
             if ds:
                 trs += [
-                    (sym, txf_pub, r_cs_s * p_entry_pub * p_dx_pub * p_txf_pub, 'pcf_pub'),
-                    (cs, txf_pub, r_cs_c * p_entry_pub * p_dx_pub * p_txf_pub, 'pcf_pub'),
-                    (sym, cs, r_cs_s * p_entry_pub * (1 - p_dx_pub * p_txf_pub), 'fn0'),
+                    (sym, txf_pub, r_cs_s * p_entry_pub * p_dx_pub * p_txi, 'pcf_pub'),
+                    (cs, txf_pub, r_cs_c * p_entry_pub * p_dx_pub * p_txi, 'pcf_pub'),
+                    (sym, cs, r_cs_s * p_entry_pub * (1 - p_dx_pub * p_txi), 'fn0'),
                 ]
             else:
                 trs += [
-                    (sym, txf_pub, r_cs_s * p_entry_pub * (1 - p_dst) * p_dx_pub * p_txf_pub, 'pcf_pub'),
-                    (sym, txs_pub, r_cs_s * p_entry_pub * p_dst * p_dx_pub * p_txs_pub, 'pcf_pub'),
-                    (cs, txf_pub, r_cs_c * p_entry_pub * (1 - p_dst) * p_dx_pub * p_txf_pub, 'pcf_pub'),
-                    (cs, txs_pub, r_cs_c * p_entry_pub * p_dst * p_dx_pub * p_txs_pub, 'pcf_pub'),
+                    (sym, txf_pub, r_cs_s * p_entry_pub * (1 - p_dst) * p_dx_pub * p_txi, 'pcf_pub'),
+                    (sym, txs_pub, r_cs_s * p_entry_pub * p_dst * p_dx_pub * p_txi, 'pcf_pub'),
+                    (cs, txf_pub, r_cs_c * p_entry_pub * (1 - p_dst) * p_dx_pub * p_txi, 'pcf_pub'),
+                    (cs, txs_pub, r_cs_c * p_entry_pub * p_dst * p_dx_pub * p_txi, 'pcf_pub'),
                     (sym, cs, r_cs_s * p_entry_pub *
-                     (1 - (1 - p_dst) * p_dx_pub * p_txf_pub - p_dst * p_dx_pub * p_txs_pub), 'fn0'),
+                     (1 - (1 - p_dst) * p_dx_pub * p_txi - p_dst * p_dx_pub * p_txi), 'fn0'),
                 ]
 
             trs += [
-                (sym, txf_pri, r_cs_s * p_entry_pri * p_dx_pri * p_txf_pri, 'pcf_pri'),
-                (cs, txf_pri, r_cs_c * p_entry_pri * p_dx_pri * p_txf_pri, 'pcf_pri'),
-                (sym, cs, r_cs_s * p_entry_pri * (1 - p_dx_pri * p_txf_pri), 'fn0'),
+                (sym, txf_pri, r_cs_s * p_entry_pri * p_dx_pri * p_txi, 'pcf_pri'),
+                (cs, txf_pri, r_cs_c * p_entry_pri * p_dx_pri * p_txi, 'pcf_pri'),
+                (sym, cs, r_cs_s * p_entry_pri * (1 - p_dx_pri * p_txi), 'fn0'),
             ]
 
             # Treatment outcome
             if ds:
                 rl, rh = I.RLow_DS, I.RHigh_DS
+
+                if t < self.T0_Rif:
+                    trs += [
+                        (txf_pub, rh, r_ltfu_fl_pub_ds + r_succ_fl_pub_ds, 'tx_ltfu'),
+                        (txf_pri, rh, r_ltfu_fl_pri_ds + r_succ_fl_pri_ds, 'tx_ltfu')
+                    ]
+                else:
+                    trs += [
+                        (txf_pub, rl, r_succ_fl_pub_ds, 'tx_succ'),
+                        (txf_pub, rh, r_ltfu_fl_pub_ds, 'tx_ltfu'),
+                        (txf_pri, rl, r_succ_fl_pri_ds, 'tx_succ'),
+                        (txf_pri, rh, r_ltfu_fl_pri_ds, 'tx_ltfu'),
+                    ]
             else:
                 rl, rh = I.RLow_DR, I.RHigh_DR
 
-            if t < self.T0_Rif:
-                trs += [
-                    (txf_pub, rh, r_ltfu_txf_pub + r_succ_txf, 'tx_ltfu'),
-                    (txs_pub, rh, r_ltfu_txs_pub + r_succ_txs, 'tx_ltfu'),
-                    (txf_pri, rh, r_ltfu_txf_pri + r_succ_txf, 'tx_ltfu')
-                ]
-            else:
-                trs += [
-                    (txf_pub, rl, r_succ_txf, 'tx_succ'),
-                    (txf_pub, rh, r_ltfu_txf_pub * (1 - p_tr_pub), 'tx_ltfu'),
-                    (txf_pub, txs_pub, r_ltfu_txf_pub * p_tr_pub, 'tx_ltfu'),
+                if t < self.T0_Rif:
+                    trs += [
+                        (txf_pub, rh, r_ltfu_fl_pub_dr + r_succ_fl_pub_dr, 'tx_ltfu'),
+                        (txs_pub, rh, r_ltfu_sl_pub_dr + r_succ_sl_pub_dr, 'tx_ltfu'),
+                        (txf_pri, rh, r_ltfu_fl_pri_dr + r_succ_fl_pri_dr, 'tx_ltfu')
+                    ]
+                else:
+                    trs += [
+                        (txf_pub, rl, r_succ_fl_pub_dr, 'tx_succ'),
+                        (txf_pub, rh, r_ltfu_fl_pub_dr * (1 - p_tr_pub), 'tx_ltfu'),
+                        (txf_pub, txs_pub, r_ltfu_fl_pub_dr * p_tr_pub, 'tx_ltfu'),
 
-                    (txs_pub, rl, r_succ_txs, 'tx_succ'),
-                    (txs_pub, rh, r_ltfu_txs_pub, 'tx_ltfu'),
-                    (txf_pri, rl, r_succ_txf, 'tx_succ'),
-                    (txf_pri, rh, r_ltfu_txf_pri, 'tx_ltfu'),
-                ]
+                        (txs_pub, rl, r_succ_sl_pub_dr, 'tx_succ'),
+                        (txs_pub, rh, r_ltfu_sl_pub_dr, 'tx_ltfu'),
+                        (txf_pri, rl, r_succ_fl_pri_dr, 'tx_succ'),
+                        (txf_pri, rh, r_ltfu_fl_pri_dr, 'tx_ltfu'),
+                    ]
 
         if intv is not None and t >= intv.T0_Intv:
             acf_l, acf_h, rates = self.trs_acf(t, y, pars, intv)

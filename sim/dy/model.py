@@ -42,6 +42,21 @@ class Model:
 
         pars['beta_dr'] = pars['beta_ds'] * pars['rr_beta_dr']
 
+        for sector in ['pub', 'pri']:
+            pars[f'r_succ_fl_{sector}_ds'] = pars['r_succ_txf']
+            p_ltfu = 1 - pars[f'p_succ_txf_{sector}'] - pars['p_die_txf_ds']
+            pars[f'r_ltfu_fl_{sector}_ds'] = pars['r_succ_txf'] * p_ltfu / pars[f'p_succ_txf_{sector}']
+
+            pars[f'r_succ_fl_{sector}_dr'] = 0
+            pars[f'r_ltfu_fl_{sector}_dr'] = pars['r_succ_txf']
+
+        pars['r_succ_sl_pub_dr'] = pars['r_succ_txs']
+        p_ltfu = 1 - pars['p_succ_txs_pub'] - pars['p_die_txs_dr']
+        pars['r_ltfu_sl_pub_dr'] = pars['r_succ_txs'] * p_ltfu / pars['p_succ_txs_pub']
+
+        pars['r_die_ds'] = pars['r_succ_txf'] * pars['p_die_txf_ds'] / pars['p_succ_txf_pub']
+        pars['r_die_dr'] = pars['r_succ_txs'] * pars['p_die_txs_dr'] / pars['p_succ_txs_pub']
+
         return pars
 
     def get_y0(self, pars):
@@ -171,8 +186,8 @@ if __name__ == '__main__':
     y1, ms, msg = m.simulate_to_baseline(p0, 2022)
 
     _, ms1, _ = m.simulate_onward(y1, p0)
-    _, ms2, _ = m.simulate_onward(y1, p0, intv={'ACF': {'Yield': .03, 'Type': 'high', 'HiRisk': False}})
-    _, ms3, _ = m.simulate_onward(y1, p0, intv={'ACF': {'Yield': .03, 'Type': 'high', 'HiRisk': True}})
+    _, ms2, _ = m.simulate_onward(y1, p0, intv={'ACF': {'Yield': .05, 'HiRisk': False}})
+    _, ms3, _ = m.simulate_onward(y1, p0, intv={'ACF': {'Yield': .03, 'HiRisk': True}})
 
     fig, axes = plt.subplots(2, 3)
 
@@ -217,8 +232,8 @@ if __name__ == '__main__':
     # ms2.CNR_RiskLo.plot(ax=axes[1, 1])
 
     ms1.TP.plot(ax=axes[1, 1])
-    ms1.TP.plot(ax=axes[1, 1])
     ms2.TP.plot(ax=axes[1, 1])
+    ms3.TP.plot(ax=axes[1, 1])
 
     # ms.PrSp_Asym.plot()
     # ms.PrSp_Sym.plot()
@@ -231,15 +246,6 @@ if __name__ == '__main__':
     # ms.IncR_Remote.plot(ax=axes[1, 0])
     # ms1.IncR_Remote.plot(ax=axes[1, 0])
     # ms2.IncR_Remote.plot(ax=axes[1, 0])
-
-    # ms.IncR_DS.plot()
-    # ms.IncR_DR.plot()
-    # ms.PrDR_Inc.plot()
-
-    # ms.IncR_DS.plot(ax=axes[1, 0])
-    # ms.IncR_DR.plot(ax=axes[1, 0])
-    # ms1.IncR_DR.plot()
-    # ms2.IncR_DR.plot()
 
     plt.legend()
     plt.show()

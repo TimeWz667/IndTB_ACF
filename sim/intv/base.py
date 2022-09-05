@@ -16,7 +16,6 @@ def scale_up(t, t0, t1):
 
 class ACF(BaseModel):
     Yield: confloat(ge=0, le=2) = 0
-    Type: str = 'mod'
     HiRisk: bool = False
 
 
@@ -38,15 +37,12 @@ class Intervention(BaseModel):
                 detectable = p_tb.sum() + p_nontb.sum()
                 r_acf = n2detect / detectable * np.ones(2)
 
-            type = self.ACF.Type
-
-            sens = np.array([pars[f'sens_acf_sn_{type}'], pars[f'sens_acf_sp_{type}']])
-
-            spec = pars[f'spec_acf_{type}']
-            p_dst = pars[f'p_dst_acf_{type}']
+            sens = pars['acf_xpert_sens']
+            spec = pars['acf_xpert_spec']
+            p_dst = pars['acf_dst_sens']
 
             p_dst = wt * p_dst
-            r_acf_tp = r_acf.reshape((-1, 2)) * sens.reshape((2, -1))
+            r_acf_tp = r_acf.reshape((-1, 2)) * sens
             r_acf_tp[r_acf_tp > 20] = 20
 
             r_acf_fp = r_acf * (1 - spec)
