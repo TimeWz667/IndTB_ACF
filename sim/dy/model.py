@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 from sim.components import Demography, Transmission, Progression, Cascade
-from sim.intv import Intervention
 from sim.util import simulate
 import sim.dy.keys as I
 from scipy.integrate import solve_ivp
@@ -67,29 +66,29 @@ class Model:
         y0[I.U] = n0 - y0.sum(0)
         return y0
 
-    def __call__(self, t, y, pars, intv=None):
+    def __call__(self, t, y, pars):
         y = y.reshape((I.N_State_TB, I.N_State_Strata))
 
-        dy = self.Demography.calc_dy(t, y, pars, intv)
-        dy += self.Transmission.calc_dy(t, y, pars, intv)
-        dy += self.Progression.calc_dy(t, y, pars, intv)
-        dy += self.Cascade.calc_dy(t, y, pars, intv)
+        dy = self.Demography.calc_dy(t, y, pars)
+        dy += self.Transmission.calc_dy(t, y, pars)
+        dy += self.Progression.calc_dy(t, y, pars)
+        dy += self.Cascade.calc_dy(t, y, pars)
 
         return dy.reshape(-1)
 
-    def measure(self, t, y, pars, intv=None):
+    def measure(self, t, y, pars):
         y = y.reshape((I.N_State_TB, I.N_State_Strata))
 
         mea = {'Time': t}
-        self.Demography.measure(t, y, pars, intv, mea)
-        self.Transmission.measure(t, y, pars, intv, mea)
-        self.Progression.measure(t, y, pars, intv, mea)
-        self.Cascade.measure(t, y, pars, intv, mea)
+        self.Demography.measure(t, y, pars, mea)
+        self.Transmission.measure(t, y, pars, mea)
+        self.Progression.measure(t, y, pars, mea)
+        self.Cascade.measure(t, y, pars, mea)
 
         return mea
 
     @staticmethod
-    def dfe(t, y, pars, intv=None):
+    def dfe(t, y, pars):
         ntb = y.reshape((I.N_State_TB, I.N_State_Strata))[I.Infectious].sum()
         return ntb - 0.5
 
@@ -102,7 +101,7 @@ class Model:
 
         t_start = 2020
         y0 = self.get_y0(p).reshape(-1)
-        ys0 = solve_ivp(self, [t_start - 300, t_start], y0, args=(p,), events=self.dfe, method='RK23')
+        ys0 = solve_ivp(self, [t_start - 300, t_start], y0, args=(p, ), events=self.dfe, method='RK23')
         if len(ys0.t_events[0]) > 0 or not ys0.success:
             return None, None, {'succ': False, 'res': 'DFE reached'}
 
@@ -131,33 +130,19 @@ class Model:
                                dfe=self.dfe)
         return ys, ms, msg
 
-    def form_non_tb_population(self, t0, y0, p, ppv0, spec):
-        mea = dict()
-        self.Cascade.measure(t0, y0.reshape((-1, 2)), p, None, mea)
-        tp = mea['TP']
-        fp = tp * (1 - ppv0) / ppv0
-        p['PPV'] = ppv0
-        p['spec0'] = spec
-        p['NonTB'] = fp / (p['r_cs_s'] * (1 - spec))
-
-    def simulate_onward(self, y0, p, intv=None, t_end=2030, dt=0.5, ppv0=0.85, spec=0.99):
+    def simulate_onward(self, y0, p, t_end=2030, dt=0.5):
         t_start = 2022
         t_out = np.linspace(t_start, t_end, int((t_end - t_start) / dt) + 1)
 
         if 'sus' not in p:
             p = self.update_parameters(p)
-        if 'PPV' not in p or (p['PPV'] is not ppv0) or 'NonTB' not in p:
-            self.form_non_tb_population(t_start, y0, p, ppv0, spec)
 
-        if intv is not None and not isinstance(intv, Intervention):
-            intv = Intervention.parse_obj(intv)
-
-        ys = solve_ivp(self, [t_start, t_end], y0, args=(p, intv), events=self.dfe, dense_output=True)
+        ys = solve_ivp(self, [t_start, t_end], y0, args=(p, ), events=self.dfe, dense_output=True)
 
         if len(ys.t_events[0]) > 0 or not ys.success:
             return None, None, {'succ': False, 'res': 'DFE reached'}
 
-        ms = [self.measure(t, ys.sol(t), p, intv) for t in t_out if t >= t_start]
+        ms = [self.measure(t, ys.sol(t), p) for t in t_out if t >= t_start]
         ms = pd.DataFrame(ms).set_index('Time')
 
         return ys, ms, {'succ': True}
@@ -181,36 +166,37 @@ if __name__ == '__main__':
     y1, ms, msg = m.simulate_to_baseline(p0, 2022)
 
     _, ms1, _ = m.simulate_onward(y1, p0)
-    _, ms2, _ = m.simulate_onward(y1, p0, intv={'ACF': {'Yield': .05, 'HiRisk': False}})
-    _, ms3, _ = m.simulate_onward(y1, p0, intv={'ACF': {'Yield': .03, 'HiRisk': True}})
+    # _, ms2, _ = m.simulate_onward(y1, p0, intv={'ACF': {'Yield': .05, 'HiRisk': False}})
+    # _, ms3, _ = m.simulate_onward(y1, p0, intv={'ACF': {'Yield': .03, 'HiRisk': True}})
 
-    fig, axes = plt.subplots(2, 3)
+    fig, axes = plt.subplots(2, 2)
 
     print(ms1.IncR.tail(5))
 
     ms1.Pop.plot(ax=axes[0, 0])
     ms1.Pop_RiskLo.plot(ax=axes[0, 0])
     ms1.Pop_RiskHi.plot(ax=axes[0, 0])
+    axes[0, 0].legend(['All', 'Lo', 'Hi'])
+    axes[0, 0].set_title('Population')
 
     ms1.LTBI.plot(ax=axes[0, 1])
     ms1.LTBI_RiskLo.plot(ax=axes[0, 1])
     ms1.LTBI_RiskHi.plot(ax=axes[0, 1])
+    axes[0, 1].legend(['All', 'Lo', 'Hi'])
+    axes[0, 1].set_title('LTBI')
 
-    ms1.IncR.plot(ax=axes[0, 2])
-    ms2.IncR.plot(ax=axes[0, 2])
-    ms3.IncR.plot(ax=axes[0, 2])
+    ms1.IncR.plot(ax=axes[1, 0])
+    ms1.IncR_RiskLo.plot(ax=axes[1, 0])
+    ms1.IncR_RiskHi.plot(ax=axes[1, 0])
+    axes[1, 0].legend(['All', 'Lo', 'Hi'])
+    axes[1, 0].set_title('Incidence')
 
-    ms1.R_ACF_Reached.plot(ax=axes[1, 2])
-    ms2.R_ACF_Reached.plot(ax=axes[1, 2])
-    ms3.R_ACF_Reached.plot(ax=axes[1, 2])
+    ms1.Prev.plot(ax=axes[1, 1])
+    ms1.Prev_RiskLo.plot(ax=axes[1, 1])
+    ms1.Prev_RiskHi.plot(ax=axes[1, 1])
+    axes[1, 1].legend(['All', 'Lo', 'Hi'])
+    axes[1, 1].set_title('Prevalence')
 
-    ms1.PPV_Acf.plot(ax=axes[1, 0])
-    ms2.PPV_Acf.plot(ax=axes[1, 0])
-    ms3.PPV_Acf.plot(ax=axes[1, 0])
+    fig.tight_layout()
 
-    ms1.TP.plot(ax=axes[1, 1])
-    ms2.TP.plot(ax=axes[1, 1])
-    ms3.TP.plot(ax=axes[1, 1])
-
-    plt.legend()
     plt.show()

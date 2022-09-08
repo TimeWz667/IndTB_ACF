@@ -10,7 +10,7 @@ class Progression(Process):
     def __init__(self, keys):
         Process.__init__(self, keys)
 
-    def get_trs(self, t, y, pars, intv):
+    def get_trs(self, t, y, pars):
         I = self.Keys
 
         pr0 = pars['p_primary']
@@ -77,16 +77,16 @@ class Progression(Process):
         trs_h = inc_h + prog
         return trs_l, trs_h
 
-    def calc_dy(self, t, y, pars, intv):
-        trs_l, trs_h = self.get_trs(t, y, pars, intv)
+    def calc_dy(self, t, y, pars):
+        trs_l, trs_h = self.get_trs(t, y, pars)
         dy = np.zeros_like(y)
         dy[:, 0] = calc_dy(y[:, 0], trs_l)
         dy[:, 1] = calc_dy(y[:, 1], trs_h)
         return dy
 
-    def measure(self, t, y, pars, intv, mea):
+    def measure(self, t, y, pars, mea):
         I = self.Keys
-        trs_l, trs_h = self.get_trs(t, y, pars, intv)
+        trs_l, trs_h = self.get_trs(t, y, pars)
 
         inc_recent = np.array([
             extract_tr(y[:, 0], trs_l, lambda x: x[3] == 'inc_recent'),
