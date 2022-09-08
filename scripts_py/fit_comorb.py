@@ -4,8 +4,7 @@ from bn.prior import get_bn
 from bn.obj import Objective
 
 
-inputs = load_inputs('../data/pars.json')
-m = Model(inputs, year0=1970)
+m = Model(year0=1970)
 bn = get_bn('../bn/prior')
 
 

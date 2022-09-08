@@ -2,15 +2,13 @@ import json
 import numpy as np
 import pandas as pd
 from sim.dy import Model
-from sim import load_inputs
 from mc.pymc_util import DataModel
 
 __all__ = ['load_objectives']
 
 
-def load_objectives(path_data, path_target, exo=None):
-    inputs = load_inputs(path_data)
-    m = Model(inputs, year0=1970)
+def load_objectives(path_target, exo=None):
+    m = Model(year0=1970)
     targets = json.load(open(path_target, 'r'))
     targets = pd.DataFrame(targets[:-3])
 
@@ -23,8 +21,6 @@ def load_objectives(path_data, path_target, exo=None):
                                          # 'PrSp_Asym', 'PrSp_PreCS', 'PrSp_ExCS'
                                          ]])
 
-    obs = targets.M
-
-    eps = (targets.U - targets.L) / 1.96
+    obs, eps = targets.M, (targets.U - targets.L) / 1.96
     dm = DataModel(np.array(obs), np.array(eps), simulator, exo=exo)
     return dm

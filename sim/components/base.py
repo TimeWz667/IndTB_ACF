@@ -4,7 +4,7 @@ __author__ = 'Chu-Chang Ku'
 __all__ = ['Process']
 
 
-class Process:
+class Process(metaclass=ABCMeta):
     def __init__(self, keys):
         self.Keys = keys
 
