@@ -112,43 +112,6 @@ class Cascade(Process):
 
         return trs, trs
 
-    # def trs_acf(self, t, y, pars, intv):
-    #     if intv is None or t < intv.T0_Intv:
-    #         return list(), list()
-    #
-    #     I = self.Keys
-    #
-    #     # ACF
-    #     r_acf0, r_acf_tp, r_acf_fp, p_dst = 0, np.zeros((2, 2)), 0, 0
-    #     n_nontb = pars['NonTB'] * y.sum(0) if 'NonTB' in pars else 0
-    #     n_tb = y[I.Sym].sum(0) + y[I.ExSym].sum(0)
-    #     n = y.sum()
-    #     p_tb, p_nontb = n_tb / n, n_nontb / n
-    #
-    #     r_acf0, r_acf_tp, r_acf_fp, p_dst = intv.modify_acf(t, r_acf0, r_acf_tp, r_acf_fp, p_dst,
-    #                                                         pars, p_tb, p_nontb)
-    #
-    #     trs_l = [
-    #         (I.Sym_DS, I.Txf_Pub_DS, r_acf_tp[0, 0], 'acf'),
-    #         (I.Sym_DR, I.Txf_Pub_DR, r_acf_tp[0, 0] * (1 - p_dst), 'acf'),
-    #         (I.Sym_DR, I.Txs_Pub_DR, r_acf_tp[0, 0] * p_dst, 'acf'),
-    #
-    #         (I.ExSym_DS, I.Txf_Pub_DS, r_acf_tp[0, 0], 'acf'),
-    #         (I.ExSym_DR, I.Txf_Pub_DR, r_acf_tp[0, 0] * (1 - p_dst), 'acf'),
-    #         (I.ExSym_DR, I.Txs_Pub_DR, r_acf_tp[0, 0] * p_dst, 'acf'),
-    #     ]
-    #     trs_h = [
-    #         (I.Sym_DS, I.Txf_Pub_DS, r_acf_tp[0, 1], 'acf'),
-    #         (I.Sym_DR, I.Txf_Pub_DR, r_acf_tp[0, 1] * (1 - p_dst), 'acf'),
-    #         (I.Sym_DR, I.Txs_Pub_DR, r_acf_tp[0, 1] * p_dst, 'acf'),
-    #
-    #         (I.ExSym_DS, I.Txf_Pub_DS, r_acf_tp[0, 1], 'acf'),
-    #         (I.ExSym_DR, I.Txf_Pub_DR, r_acf_tp[0, 1] * (1 - p_dst), 'acf'),
-    #         (I.ExSym_DR, I.Txs_Pub_DR, r_acf_tp[0, 1] * p_dst, 'acf'),
-    #     ]
-    #
-    #     return trs_l, trs_h, {'r_acf0': r_acf0, 'r_acf_tp': r_acf_tp, 'r_acf_fp': r_acf_fp, 'p_dst': p_dst}
-
     def calc_dy(self, t, y, pars):
         trs_l, trs_h = self.get_trs(t, y, pars)
         dy = np.zeros_like(y)
@@ -182,6 +145,3 @@ class Cascade(Process):
         mea['N_Pub_Detected'] = det_pub.sum()
         mea['N_Pri_Detected'] = det_pri.sum()
         mea['PrDR_CNR'] = det_dr.sum() / max(det_pub.sum(), 1e-10)
-
-        mea['FP'] = mea['FP_Pcf'] = 0
-        mea['PPV'] = mea['PPV_Pcf'] = 1

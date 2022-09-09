@@ -10,7 +10,7 @@ __all__ = ['Model']
 
 
 class Model:
-    def __init__(self, year0=2010):
+    def __init__(self, year0=1970):
         self.Demography = Demography(I)
         self.Transmission = Transmission(I)
         self.Progression = Progression(I)
