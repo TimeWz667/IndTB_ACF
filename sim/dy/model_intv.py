@@ -49,7 +49,9 @@ class ModelIntv(Model):
         if intv is not None:
             r_acf_vul = intv.modify_acf_vul(t, r_acf_vul)
 
-            acf_vul = r_acf_vul * eligible * pars['pos_vul'] * pos_xpert * y[:, :2]
+            eli_vul = eligible * y[:, :2]
+            r_acf_vul *= y.sum() / eli_vul.sum()
+            acf_vul = r_acf_vul * pars['pos_vul'] * pos_xpert * eli_vul
             acf_vul_tp_ds, acf_vul_tp_dr = acf_vul[I.Infectious_DS], acf_vul[I.Infectious_DR]
 
             dy[I.Infectious_DS, :2] -= acf_vul_tp_ds
@@ -74,11 +76,15 @@ class ModelIntv(Model):
         pos_vul = pars['pos_vul']
         r_acf_mu, r_acf_d2d, p_dst = pars['r_acf_mu'], pars['r_acf_d2d'], pars['acf_dst_sens']
         r_acf_vul = 0
+        eli_vul = eligible * y[:, :2]
         if intv is not None:
             r_acf_mu, r_acf_d2d, p_dst = intv.modify_acf_bg(t, r_acf_mu, r_acf_d2d, p_dst)
             r_acf_vul = intv.modify_acf_vul(t, r_acf_vul)
 
-        acf_mu_reach0 = r_acf_mu * eligible * y[:, :2]
+            r_acf_vul *= y.sum() / eli_vul.sum()
+            acf_vul = r_acf_vul * pars['pos_vul'] * pos_xpert * eli_vul
+
+        acf_mu_reach0 = r_acf_mu * eli_vul
         acf_mu_reach1 = acf_mu_reach0 * pos_cxr
         acf_mu_reach2 = acf_mu_reach1 * pos_xpert
 
@@ -101,8 +107,10 @@ class ModelIntv(Model):
             'Yield_ACF_D2D': acf_d2d_reach2.sum() / n,
             'Reach_ACF_Vul1': acf_vul_reach0.sum() / n,
             'Reach_ACF_Vul2': acf_vul_reach1.sum() / n,
-            'Yield_ACF_Vul': acf_vul_reach2.sum() / n
+            'Yield_ACF_Vul': acf_vul_reach2.sum() / n,
+            'Yield_ACF_Vul_TP': acf_vul_reach2[I.Infectious].sum() / n
         }
+        mea_acf['PPV_ACF_Vul'] = mea_acf['Yield_ACF_Vul_TP'] / max(mea_acf['Yield_ACF_Vul'], 1e-10)
 
         # baseline metrics
         y = y[:, :2] + y[:, 2:]

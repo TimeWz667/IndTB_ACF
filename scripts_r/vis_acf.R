@@ -1,28 +1,32 @@
 library(tidyverse)
 
 
+
 theme_set(theme_bw())
 
 
-ds <- c("dy_sc1-2", "dy_sc2-2")
+ds <- c("dy_free")
+
+d <- ds[1]
+ys <- read_csv(here::here("out", d, "Sim_VulACF_budget.csv"))[-1]
 
 
-scs <- bind_rows(lapply(ds, function(d) {
-  ys <- read_csv(here::here("out", d, "Runs_Post.csv"))
-  ys %>% 
-    mutate(File = d, OR_ComorbTB = or_comorb, P_Comorb = pr_tb) %>% 
-    select(File, OR_ComorbTB, P_Comorb) %>% 
-    distinct()
-}))
+stats <- ys %>% 
+  group_by(Key, Coverage, p_comorb, rr) %>%
+  mutate(across(everything(), function(x) x * Pop)) %>% 
+  select(-Pop) %>% 
+  summarise(across(everything(), function(x) sum(x) * 0.5)) %>% 
+  ungroup()
 
 
-scs
 
+stats %>% 
+  left_join(stats %>% filter(Coverage == 0) %>% select(Key, IncR0 = IncR)) %>% 
+  ungroup() %>% 
+  mutate(Avt = 1 - IncR / IncR0) %>% 
+  ggplot() + 
+  geom_line(aes(x = Coverage, y = Avt, colour = p_comorb, group = p_comorb))
 
-ppv0 <- 0.8
-
-
-pop0 <- 1e6
 
 
 sims <- bind_rows(lapply(ds, function(d) {

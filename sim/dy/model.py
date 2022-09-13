@@ -126,7 +126,7 @@ class Model:
         ys, ms, msg = simulate(self,
                                pars=p,
                                t_warmup=300,
-                               t_out=np.linspace(1970, 2020, int(50 * 2) + 1),
+                               t_out=np.linspace(1970, 2022, int(52 * 2) + 1),
                                dfe=self.dfe)
         return ys, ms, msg
 
