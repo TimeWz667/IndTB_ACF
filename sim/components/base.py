@@ -8,13 +8,10 @@ class Process(metaclass=ABCMeta):
     def __init__(self, keys):
         self.Keys = keys
 
-    # def __call__(self, t, y, pars, intv, calc):
-    #     pass
-
     @abstractmethod
-    def calc_dy(self, t, y, pars, intv):
+    def calc_dy(self, t, y, pars):
         pass
 
     @abstractmethod
-    def measure(self, t, y, pars, intv, mea):
+    def measure(self, t, y, pars, mea):
         pass

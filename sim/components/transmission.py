@@ -15,7 +15,7 @@ class Transmission(Process):
         calc['infection_ds'] = infection(sus=pars['sus'], trans=pars['trans_ds'], y=y) * pars['beta_ds']
         calc['infection_dr'] = infection(sus=pars['sus'], trans=pars['trans_dr'], y=y) * pars['beta_dr']
 
-    def calc_dy(self, t, y, pars, intv):
+    def calc_dy(self, t, y, pars):
         I = self.Keys
         calc = dict()
         self(t, y, pars, calc)
@@ -29,7 +29,7 @@ class Transmission(Process):
 
         return dy
 
-    def measure(self, t, y, pars, intv, mea):
+    def measure(self, t, y, pars, mea):
         I = self.Keys
         calc = dict()
         self(t, y, pars, calc)

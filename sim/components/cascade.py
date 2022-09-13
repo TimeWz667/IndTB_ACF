@@ -13,7 +13,7 @@ class Cascade(Process):
         self.T0_DOTS = 1990
         self.T1_DOTS = 2007
 
-    def get_trs(self, t, y, pars, intv):
+    def get_trs(self, t, y, pars):
         I = self.Keys
 
         trs = list()
@@ -110,64 +110,19 @@ class Cascade(Process):
                         (txf_pri, rh, r_ltfu_fl_pri_dr, 'tx_ltfu'),
                     ]
 
-        if intv is not None and t >= intv.T0_Intv:
-            acf_l, acf_h, rates = self.trs_acf(t, y, pars, intv)
-            trs_l = trs + acf_l
-            trs_h = trs + acf_h
-        else:
-            trs_l = trs_h = trs
-            rates = dict()
+        return trs, trs
 
-        return trs_l, trs_h, rates
-
-    def trs_acf(self, t, y, pars, intv):
-        if intv is None or t < intv.T0_Intv:
-            return list(), list()
-
-        I = self.Keys
-
-        # ACF
-        r_acf0, r_acf_tp, r_acf_fp, p_dst = 0, np.zeros((2, 2)), 0, 0
-        n_nontb = pars['NonTB'] * y.sum(0) if 'NonTB' in pars else 0
-        n_tb = y[I.Sym].sum(0) + y[I.ExSym].sum(0)
-        n = y.sum()
-        p_tb, p_nontb = n_tb / n, n_nontb / n
-
-        r_acf0, r_acf_tp, r_acf_fp, p_dst = intv.modify_acf(t, r_acf0, r_acf_tp, r_acf_fp, p_dst,
-                                                            pars, p_tb, p_nontb)
-
-        trs_l = [
-            (I.Sym_DS, I.Txf_Pub_DS, r_acf_tp[0, 0], 'acf'),
-            (I.Sym_DR, I.Txf_Pub_DR, r_acf_tp[0, 0] * (1 - p_dst), 'acf'),
-            (I.Sym_DR, I.Txs_Pub_DR, r_acf_tp[0, 0] * p_dst, 'acf'),
-
-            (I.ExSym_DS, I.Txf_Pub_DS, r_acf_tp[0, 0], 'acf'),
-            (I.ExSym_DR, I.Txf_Pub_DR, r_acf_tp[0, 0] * (1 - p_dst), 'acf'),
-            (I.ExSym_DR, I.Txs_Pub_DR, r_acf_tp[0, 0] * p_dst, 'acf'),
-        ]
-        trs_h = [
-            (I.Sym_DS, I.Txf_Pub_DS, r_acf_tp[0, 1], 'acf'),
-            (I.Sym_DR, I.Txf_Pub_DR, r_acf_tp[0, 1] * (1 - p_dst), 'acf'),
-            (I.Sym_DR, I.Txs_Pub_DR, r_acf_tp[0, 1] * p_dst, 'acf'),
-
-            (I.ExSym_DS, I.Txf_Pub_DS, r_acf_tp[0, 1], 'acf'),
-            (I.ExSym_DR, I.Txf_Pub_DR, r_acf_tp[0, 1] * (1 - p_dst), 'acf'),
-            (I.ExSym_DR, I.Txs_Pub_DR, r_acf_tp[0, 1] * p_dst, 'acf'),
-        ]
-
-        return trs_l, trs_h, {'r_acf0': r_acf0, 'r_acf_tp': r_acf_tp, 'r_acf_fp': r_acf_fp, 'p_dst': p_dst}
-
-    def calc_dy(self, t, y, pars, intv):
-        trs_l, trs_h, _ = self.get_trs(t, y, pars, intv)
+    def calc_dy(self, t, y, pars):
+        trs_l, trs_h = self.get_trs(t, y, pars)
         dy = np.zeros_like(y)
         dy[:, 0] = calc_dy(y[:, 0], trs_l)
         dy[:, 1] = calc_dy(y[:, 1], trs_h)
         return dy
 
-    def measure(self, t, y, pars, intv, mea):
+    def measure(self, t, y, pars, mea):
         I = self.Keys
 
-        trs_l, trs_h, rates = self.get_trs(t, y, pars, intv)
+        trs_l, trs_h = self.get_trs(t, y, pars)
 
         fil = lambda x: x[3] == 'pcf_pub'
         det_pub = np.array([extract_tr(y[:, 0], trs_l, fil), extract_tr(y[:, 1], trs_h, fil)])
@@ -175,10 +130,7 @@ class Cascade(Process):
         fil = lambda x: x[3] == 'pcf_pri'
         det_pri = np.array([extract_tr(y[:, 0], trs_l, fil), extract_tr(y[:, 1], trs_h, fil)])
 
-        fil = lambda x: x[3] == 'acf'
-        det_acf = np.array([extract_tr(y[:, 0], trs_l, fil), extract_tr(y[:, 1], trs_h, fil)])
-
-        det = det_pub + det_pri + det_acf
+        det = det_pub + det_pri
 
         fil = lambda x: x[0] in I.Infectious_DR and x[3] == 'pcf_pub'
         det_dr = np.array([extract_tr(y[:, 0], trs_l, fil), extract_tr(y[:, 1], trs_h, fil)])
@@ -190,30 +142,6 @@ class Cascade(Process):
         mea['TP_Pub'] = det_pub.sum() / n
         mea['TP_Pri'] = det_pri.sum() / n
         mea['TP_Pcf'] = mea['TP_Pub'] + mea['TP_Pri']
-        mea['TP_Acf'] = det_acf.sum() / n
         mea['N_Pub_Detected'] = det_pub.sum()
         mea['N_Pri_Detected'] = det_pri.sum()
         mea['PrDR_CNR'] = det_dr.sum() / max(det_pub.sum(), 1e-10)
-
-        if 'r_acf_fp' in rates and 'NonTB' in pars:
-            n_tb = y[I.Sym].sum(0) + y[I.ExSym].sum(0)
-            n_nontb = pars['NonTB'] * y.sum(0)
-            fp_pcf = n_nontb * pars['r_cs_s'] * (1 - pars['spec0'])
-            fp_acf = n_nontb * rates['r_acf_fp']
-            mea['FP_Pcf'] = fp_pcf.sum() / n
-            mea['FP_Acf'] = fp_acf.sum() / n
-            mea['FP'] = mea['FP_Pcf'] + mea['FP_Acf']
-
-            mea['PPV_Pcf'] = mea['TP_Pcf'] / (mea['TP_Pcf'] + mea['FP_Pcf'] + 1e-10)
-            mea['PPV_Acf'] = mea['TP_Acf'] / (mea['TP_Acf'] + mea['FP_Acf'] + 1e-10)
-
-            mea['N_ACF_TB_Reached'] = (n_tb * rates['r_acf0']).sum()
-            mea['N_ACF_NonTB_Reached'] = (n_nontb * rates['r_acf0']).sum()
-            mea['N_ACF_Reached'] = mea['N_ACF_TB_Reached'] + mea['N_ACF_NonTB_Reached']
-
-        else:
-            mea['FP'] = mea['FP_Pcf'] = mea['FP_Acf'] = 0
-            mea['PPV'] = mea['PPV_Pcf'] = mea['PPV_Acf'] = 1
-            mea['N_ACF_Reached'] = mea['N_ACF_TB_Reached'] = mea['N_ACF_NonTB_Reached'] = 0
-
-        mea['R_ACF_Reached'] = mea['N_ACF_Reached'] / n

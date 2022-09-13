@@ -6,48 +6,41 @@ __author__ = 'Chu-Chang Ku'
 __all__ = ['Intervention']
 
 
-def scale_up(t, t0, t1):
-    if t < t0:
-        return 0
-    if t > t1:
-        return 1
-    return (t - t0) / (t1 - t0)
+class VulACF(BaseModel):
+    Coverage: confloat(ge=0, le=2) = 0
 
 
-class ACF(BaseModel):
-    Yield: confloat(ge=0, le=2) = 0
-    HiRisk: bool = False
+class MU(BaseModel):
+    Scale: confloat(ge=0) = 1
+
+
+class D2D(BaseModel):
+    Scale: confloat(ge=0) = 1
+
+
+class PlainACF(BaseModel):
+    Coverage: confloat(ge=0) = 0
 
 
 class Intervention(BaseModel):
-    ACF: ACF = ACF()
-    # ACFPlain: ACFPlain = ACFPlain()
-    T0_Intv: float = 2022
-    T1_Intv: float = 2025
+    VulACF = VulACF()
+    MU = MU()
+    D2D = D2D()
+    PlainACF = PlainACF()
+    T0_Intv = 2022
 
-    def modify_acf(self, t, r_acf, r_acf_tp, r_acf_fp, p_dst, pars, p_tb, p_nontb):
-        if t >= self.T0_Intv and self.ACF.Yield > 0:
-            wt = scale_up(t, self.T0_Intv, self.T1_Intv)
-            n2detect = self.ACF.Yield * wt
+    def modify_acf_bg(self, t, r_acf_mu, r_acf_d2d, p_dst):
+        if t >= self.T0_Intv:
+            r_acf_mu *= self.MU.Scale
+            r_acf_d2d *= self.D2D.Scale
 
-            if self.ACF.HiRisk:
-                detectable = p_tb[1] + p_nontb[1]
-                r_acf = n2detect / detectable * np.array([0, 1])
-            else:
-                detectable = p_tb.sum() + p_nontb.sum()
-                r_acf = n2detect / detectable * np.ones(2)
+        return r_acf_mu, r_acf_d2d, p_dst
 
-            sens = pars['acf_xpert_sens']
-            spec = pars['acf_xpert_spec']
-            p_dst = pars['acf_dst_sens']
+    def modify_acf_vul(self, t, r_acf):
+        if t >= 2023:
+            r_acf = self.VulACF.Coverage
 
-            p_dst = wt * p_dst
-            r_acf_tp = r_acf.reshape((-1, 2)) * sens
-            r_acf_tp[r_acf_tp > 20] = 20
-
-            r_acf_fp = r_acf * (1 - spec)
-
-        return r_acf, r_acf_tp, r_acf_fp, p_dst
+        return r_acf
 
 
 if __name__ == '__main__':
