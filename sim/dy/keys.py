@@ -35,7 +35,19 @@ RHigh_DR = 22
 RSt_DS = 23
 RSt_DR = 24
 
-N_State_TB = 25
+FLatTPT_DS = 25
+FLatTPT_DR = 26
+SLatTPT_DS = 27
+SLatTPT_DR = 28
+RLowTPT_DS = 29
+RLowTPT_DR = 30
+RHighTPT_DS = 31
+RHighTPT_DR = 32
+RStTPT_DS = 33
+RStTPT_DR = 34
+
+
+N_State_TB = 35
 
 
 # Meta group
@@ -56,6 +68,12 @@ RLow = [RLow_DS, RLow_DR]
 RHigh = [RHigh_DS, RHigh_DR]
 RSt = [RSt_DS, RSt_DR]
 
+FLatTPT = [FLatTPT_DS, FLatTPT_DR]
+SLatTPT = [SLatTPT_DS, SLatTPT_DR]
+RLowTPT = [RLowTPT_DS, RLowTPT_DR]
+RHighTPT = [RHighTPT_DS, RHighTPT_DR]
+RStTPT = [RStTPT_DS, RStTPT_DR]
+
 
 # Infectious
 Infectious_DS = [x[0] for x in [Asym, Sym, ExSym]]
@@ -69,10 +87,11 @@ Infectious.sort()
 
 
 # LTBI
-LTBI = FLat + SLat + RLow + RHigh + RSt
+LTBI = FLat + SLat + RLow + RHigh + RSt + FLatTPT + SLatTPT + RLowTPT + RHighTPT + RStTPT
 LTBI.sort()
 
-Sub_Resist = Sub_DS, Sub_DR = [0, 1]  # q
+LTBI_TPT = FLatTPT + SLatTPT + RLowTPT + RHighTPT + RStTPT
+LTBI_TPT.sort()
 
 
 # Second dim

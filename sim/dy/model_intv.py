@@ -11,10 +11,81 @@ __all__ = ['Model']
 
 
 class ModelIntv(Model):
-    def __init__(self, year0=1970, time_out=0):
+    def __init__(self, year0=1970):
         Model.__init__(self, year0)
         self.Parent = Model(year0)
-        self.TimeOut = time_out
+
+    @staticmethod
+    def _calc_bg_acf(y,  r_acf, eli, pos_screen, pos_confirm, p_dst, mea=False, label='bg'):
+        arrived = r_acf * y
+        screened = arrived * eli
+        confirmed = screened * pos_screen
+        pos = confirmed * pos_confirm
+        tp_ds, tp_dr = pos[I.Infectious_DS], pos[I.Infectious_DR]
+        tp_dr_fl = tp_dr * (1 - p_dst)
+        tp_dr_sl = tp_dr - tp_dr_fl
+
+        if mea:
+            n = y.sum()
+            return {
+                f'ACF_{label}_Footfall': arrived.sum() / n,
+                f'ACF_{label}_Screened': screened.sum() / n,
+                f'ACF_{label}_Confirmed': confirmed.sum() / n,
+                f'ACF_{label}_Yield': pos.sum() / n,
+                f'ACF_{label}_TP': (tp_ds + tp_dr) / n,
+                f'ACF_{label}_DS_Fl': tp_ds / n,
+                f'ACF_{label}_DR_Fl': tp_dr_fl / n,
+                f'ACF_{label}_DR_Sl': tp_dr_sl / n,
+            }
+        else:
+            dy = np.zeros_like(y)
+            dy[I.Infectious_DS, :2] -= tp_ds
+            dy[I.Infectious_DR, :2] -= tp_dr
+            dy[I.Txf_Pub_DS, :2] += tp_ds.sum(0)
+            dy[I.Txf_Pub_DR, :2] += tp_dr_fl.sum(0)
+            dy[I.Txs_Pub_DR, :2] += tp_dr_sl.sum(0)
+            return dy
+
+    @staticmethod
+    def _calc_vul_acf(y, cov, r_fu, r_lost, eli, pos_screen, pos_confirm, p_dst, mea=False, label='vul'):
+        n = y.sum()
+        n_target = cov * y.sum()
+        r_acf = n_target / (eli * y[:, :2]).sum()
+        arrived = r_acf * y[:, :2]
+        screened = arrived * eli
+        confirmed = screened * pos_screen
+        pos = confirmed * pos_confirm
+        tp_ds, tp_dr = pos[I.Infectious_DS], pos[I.Infectious_DR]
+        tp_dr_fl = tp_dr * (1 - p_dst)
+        tp_dr_sl = tp_dr - tp_dr_fl
+
+        fp_tpt = pos[I.LTBI]
+
+        if mea:
+            return {
+                f'ACF_{label}_Footfall': arrived.sum() / n,
+                f'ACF_{label}_Screened': screened.sum() / n,
+                f'ACF_{label}_Confirmed': confirmed.sum() / n,
+                f'ACF_{label}_Yield': pos.sum() / n,
+                f'ACF_{label}_TP': (tp_ds + tp_dr) / n,
+                f'ACF_{label}_DS_Fl': tp_ds / n,
+                f'ACF_{label}_DR_Fl': tp_dr_fl / n,
+                f'ACF_{label}_DR_Sl': tp_dr_sl / n,
+            }
+        else:
+            dy = np.zeros_like(y)
+            dy[I.Infectious_DS, :2] -= tp_ds
+            dy[I.Infectious_DR, :2] -= tp_dr
+            dy[I.Txf_Pub_DS, :2] += tp_ds.sum(0)
+            dy[I.Txf_Pub_DR, :2] += tp_dr_fl.sum(0)
+            dy[I.Txs_Pub_DR, :2] += tp_dr_sl.sum(0)
+
+            if r_fu > 0:
+                lost = r_lost * y[:, 2:]
+                dy[:, 2:] -= lost
+                dy[:, :2] += lost
+
+            return dy
 
     def __call__(self, t, y, pars, intv=None):
         y = y.reshape((I.N_State_TB, I.N_State_Strata * 2))
@@ -22,49 +93,35 @@ class ModelIntv(Model):
 
         dy[:, :2] = self.Parent(t, y[:, :2], pars).reshape((-1, 2))
         if y[:, 2:].sum() > 0:
-            dy[:, 2:] = self.Parent(t, y[:, 2:], pars).reshape((-1, 2))
+            pars_acf = dict(pars)
 
-        # ACF
-        pos_sym, pos_cxr, pos_xpert, eligible = pars['pos_sym'], pars['pos_cxr'], pars['pos_xpert'], pars['eligible']
+            dy[:, 2:] = self.Parent(t, y[:, 2:], pars_acf).reshape((-1, 2))
+
+        # ACF, background
+        pos_sym, pos_cxr, pos_xpert, eligible = pars['pos_sym'], pars['pos_cxr'], pars['pos_xpert'], pars['eli']
         r_acf_mu, r_acf_d2d, p_dst = pars['r_acf_mu'], pars['r_acf_d2d'], pars['acf_dst_sens']
+
+        pos_vul = pars['pos_vul']
+        r_acf_vul = r_acf_plain = 0
+
         if intv is not None:
             r_acf_mu, r_acf_d2d, p_dst = intv.modify_acf_bg(t, r_acf_mu, r_acf_d2d, p_dst)
+            # MDU
+            if r_acf_mu > 0:
+                dy[:, :2] += self._calc_bg_acf(y[:, :2], r_acf_mu, eligible, pos_cxr, pos_xpert, p_dst, mea=False)
+            # D2D
+            if r_acf_d2d > 0:
+                dy[:, :2] += self._calc_bg_acf(y[:, :2], r_acf_d2d, eligible, pos_sym, pos_xpert, p_dst, mea=False)
 
-        # intv
-        acf_mu = r_acf_mu * eligible * pos_cxr * pos_xpert * y[:, :2]
-        acf_mu_tp_DS, acf_mu_tp_DR = acf_mu[I.Infectious_DS], acf_mu[I.Infectious_DR]
-        acf_d2d = r_acf_d2d * eligible * pos_sym * pos_xpert * y[:, :2]
-        acf_d2d_tp_DS, acf_d2d_tp_DR = acf_d2d[I.Infectious_DS], acf_d2d[I.Infectious_DR]
+            # Vulnerability-led ACF
+            r_acf_vul, r_fu, r_lost = intv.modify_acf_vul(t, r_acf_vul, 0, 0)
+            if r_acf_vul > 0:
+                dy += self._calc_vul_acf(y, r_acf_vul, r_fu, r_lost, eligible, pos_vul, pos_xpert, p_dst, mea=False)
 
-        acf_tp_ds, acf_tp_dr = acf_mu_tp_DS + acf_d2d_tp_DS, acf_mu_tp_DR + acf_d2d_tp_DR
-
-        dy[I.Infectious_DS, :2] -= acf_tp_ds
-        dy[I.Infectious_DR, :2] -= acf_tp_dr
-        dy[I.Txf_Pub_DS, :2] += acf_tp_ds.sum(0)
-        dy[I.Txf_Pub_DR, :2] += acf_tp_dr.sum(0) * (1 - p_dst)
-        dy[I.Txs_Pub_DR, :2] += acf_tp_dr.sum(0) * p_dst
-
-        # Vulnerability-led ACF
-        r_acf_vul = 0
-        if intv is not None:
-            r_acf_vul = intv.modify_acf_vul(t, r_acf_vul)
-
-            eli_vul = eligible * y[:, :2]
-            r_acf_vul *= y.sum() / eli_vul.sum()
-            acf_vul = r_acf_vul * pars['pos_vul'] * pos_xpert * eli_vul
-            acf_vul_tp_ds, acf_vul_tp_dr = acf_vul[I.Infectious_DS], acf_vul[I.Infectious_DR]
-
-            dy[I.Infectious_DS, :2] -= acf_vul_tp_ds
-            dy[I.Infectious_DR, :2] -= acf_vul_tp_dr
-            dy[I.Txf_Pub_DS, :2] += acf_vul_tp_ds.sum(0)
-            dy[I.Txf_Pub_DR, :2] += acf_vul_tp_dr.sum(0) * (1 - p_dst)
-            dy[I.Txs_Pub_DR, :2] += acf_vul_tp_dr.sum(0) * p_dst
-            # todo timeout setup
-
-        if self.TimeOut > 0:
-            lost = dy[:, 2:] / self.TimeOut
-            dy[:, 2:] -= lost
-            dy[:, :2] += lost
+            # Plain ACF
+            r_acf_plain, r_fu, r_lost = intv.modify_acf_vul(t, r_acf_plain, 0, 0)
+            if r_acf_vul > 0:
+                dy += self._calc_vul_acf(y, r_acf_plain, r_fu, r_lost, eligible, pos_cxr, pos_xpert, p_dst, mea=False)
 
         return dy.reshape(-1)
 
@@ -72,45 +129,34 @@ class ModelIntv(Model):
         y = y.reshape((I.N_State_TB, I.N_State_Strata * 2))
 
         # ACF metrics
-        pos_sym, pos_cxr, pos_xpert, eligible = pars['pos_sym'], pars['pos_cxr'], pars['pos_xpert'], pars['eligible']
-        pos_vul = pars['pos_vul']
+        pos_sym, pos_cxr, pos_xpert, eligible = pars['pos_sym'], pars['pos_cxr'], pars['pos_xpert'], pars['eli']
         r_acf_mu, r_acf_d2d, p_dst = pars['r_acf_mu'], pars['r_acf_d2d'], pars['acf_dst_sens']
-        r_acf_vul = 0
-        eli_vul = eligible * y[:, :2]
+
+        pos_vul = pars['pos_vul']
+        r_acf_vul = r_acf_plain = 0
+
+        mea_acf = {}
+
         if intv is not None:
             r_acf_mu, r_acf_d2d, p_dst = intv.modify_acf_bg(t, r_acf_mu, r_acf_d2d, p_dst)
-            r_acf_vul = intv.modify_acf_vul(t, r_acf_vul)
 
-            r_acf_vul *= y.sum() / eli_vul.sum()
-            acf_vul = r_acf_vul * pars['pos_vul'] * pos_xpert * eli_vul
+            # MDU
+            mea_acf.update(self._calc_bg_acf(y[:, :2], r_acf_mu, eligible, pos_cxr, pos_xpert, p_dst,
+                                             mea=True, label='MDU'))
 
-        acf_mu_reach0 = r_acf_mu * eli_vul
-        acf_mu_reach1 = acf_mu_reach0 * pos_cxr
-        acf_mu_reach2 = acf_mu_reach1 * pos_xpert
+            # D2D
+            mea_acf.update(self._calc_bg_acf(y[:, :2], r_acf_mu, eligible, pos_cxr, pos_xpert, p_dst,
+                                             mea=True, label='D2D'))
 
-        acf_d2d_reach0 = r_acf_d2d * eligible * y[:, :2]
-        acf_d2d_reach1 = acf_d2d_reach0 * pos_sym
-        acf_d2d_reach2 = acf_d2d_reach1 * pos_xpert
+            # Vulnerability-led ACF
+            r_acf_vul, r_fu, r_lost = intv.modify_acf_vul(t, r_acf_vul, 0, 0)
+            mea_acf.update(self._calc_vul_acf(y, r_acf_vul, r_fu, r_lost, eligible, pos_vul, pos_xpert, p_dst,
+                                              mea=True, label='Vul'))
 
-        acf_vul_reach0 = r_acf_vul * eligible * y[:, :2]
-        acf_vul_reach1 = acf_vul_reach0 * pos_vul
-        acf_vul_reach2 = acf_vul_reach1 * pos_xpert
-
-        n = y.sum()
-
-        mea_acf = {
-            'Reach_ACF_MU1': acf_mu_reach0.sum() / n,
-            'Reach_ACF_MU2': acf_mu_reach1.sum() / n,
-            'Yield_ACF_MU': acf_mu_reach2.sum() / n,
-            'Reach_ACF_D2D1': acf_d2d_reach0.sum() / n,
-            'Reach_ACF_D2D2': acf_d2d_reach1.sum() / n,
-            'Yield_ACF_D2D': acf_d2d_reach2.sum() / n,
-            'Reach_ACF_Vul1': acf_vul_reach0.sum() / n,
-            'Reach_ACF_Vul2': acf_vul_reach1.sum() / n,
-            'Yield_ACF_Vul': acf_vul_reach2.sum() / n,
-            'Yield_ACF_Vul_TP': acf_vul_reach2[I.Infectious].sum() / n
-        }
-        mea_acf['PPV_ACF_Vul'] = mea_acf['Yield_ACF_Vul_TP'] / max(mea_acf['Yield_ACF_Vul'], 1e-10)
+            # Plain ACF
+            r_acf_plain, r_fu, r_lost = intv.modify_acf_vul(t, r_acf_plain, 0, 0)
+            mea_acf.update(self._calc_vul_acf(y, r_acf_plain, r_fu, r_lost, eligible, pos_cxr, pos_xpert, p_dst,
+                                              mea=True, label='Plain'))
 
         # baseline metrics
         y = y[:, :2] + y[:, 2:]
@@ -148,7 +194,7 @@ class ModelIntv(Model):
 
     @staticmethod
     def _find_r_acf0(y0, p, yield_mu=104.5 / 3e6, yield_d2d=430 / 3e6):
-        pos_sym, pos_cxr, pos_xpert, eligible = p['pos_sym'], p['pos_cxr'], p['pos_xpert'], p['eligible']
+        pos_sym, pos_cxr, pos_xpert, eligible = p['pos_sym'], p['pos_cxr'], p['pos_xpert'], p['eli']
 
         p['r_acf_mu'] = yield_mu / ((y0 * eligible * pos_cxr * pos_xpert).sum() / y0.sum())
         p['r_acf_d2d'] = yield_d2d / ((y0 * eligible * pos_sym * pos_xpert).sum() / y0.sum())
@@ -161,6 +207,10 @@ class ModelIntv(Model):
         eligible = np.ones_like(y0)
         eligible[I.Tx_DS] = 0
         eligible[I.Tx_DR] = 0
+        eligible[I.LTBI_TPT] = 0
+
+        vul = eligible.copy()
+        vul[:, 0] = 0
 
         pos_cxr = np.zeros_like(y0)
         pos_cxr[I.U] = (1 - spec_cxr)
@@ -187,7 +237,7 @@ class ModelIntv(Model):
 
                 return (ppv_d2d - ppv_mu) ** 2
 
-            opt = minimize_scalar(fn, 1, args=(y0, ), method='bounded', bounds=(0.5, 1))
+            opt = minimize_scalar(fn, 0.99, args=(y0, ), method='bounded', bounds=(0.5, 1))
             spec_sym = opt.x
 
         pos_sym = np.zeros_like(y0)
@@ -199,7 +249,8 @@ class ModelIntv(Model):
         pos_vul[:, 1] = 1
 
         p.update({
-            'eligible': eligible,
+            'eli': eligible,
+            'eli_vul': vul,
             'pos_sym': pos_sym,
             'pos_vul': pos_vul,
             'pos_cxr': pos_cxr,
@@ -242,13 +293,13 @@ if __name__ == '__main__':
     _, ms0, _ = m0.simulate_onward(y1, p1, intv={'D2D': {'Scale': 0}, 'MU': {'Scale': 0}})
     # _, ms1, _ = m0.simulate_onward(y1, p1, intv={'D2D': {'Scale': 1}, 'MU': {'Scale': 1}})
     # _, ms2, _ = m0.simulate_onward(y1, p1, intv={'D2D': {'Scale': 2}, 'MU': {'Scale': 2}})
-    _, ms1, _ = m0.simulate_onward(y1, p1, intv={'D2D': {'Scale': 0}, 'MU': {'Scale': 0}, 'VulACF': {'Coverage': 0.2}})
-    _, ms2, _ = m0.simulate_onward(y1, p1, intv={'D2D': {'Scale': 0}, 'MU': {'Scale': 0}, 'VulACF': {'Coverage': 0.5}})
+    _, ms1, _ = m0.simulate_onward(y1, p1, intv={'VulACF': {'Coverage': 0.2}})
+    _, ms2, _ = m0.simulate_onward(y1, p1, intv={'VulACF': {'Coverage': 0.5}})
     # _, ms2, _ = m.simulate_onward(y1, p0, intv={'ACF': {'Yield': .05, 'HiRisk': False}})
     # _, ms3, _ = m.simulate_onward(y1, p0, intv={'ACF': {'Yield': .03, 'HiRisk': True}})
 
-    print('MU', ms1.Yield_ACF_MU[2022.5] * 1e5, 104.5 / 3e6 * 1e5)
-    print('D2D', ms1.Yield_ACF_D2D[2022.5] * 1e5, 430 / 3e6 * 1e5)
+    print('MU', ms1.ACF_MDU_Yield[2022.5] * 1e5, 104.5 / 3e6 * 1e5)
+    print('D2D', ms1.ACF_D2D_Yield[2022.5] * 1e5, 430 / 3e6 * 1e5)
 
     fig, axes = plt.subplots(3, 2)
 
@@ -273,27 +324,26 @@ if __name__ == '__main__':
     axes[2, 0].legend(['I0', 'I1', 'I2'])
     axes[2, 0].set_title('Mortality')
 
-    ms0.Yield_ACF_MU.plot(ax=axes[0, 1])
-    ms1.Yield_ACF_MU.plot(ax=axes[0, 1])
-    ms2.Yield_ACF_MU.plot(ax=axes[0, 1])
+    ms0.ACF_MDU_Yield.plot(ax=axes[0, 1])
+    ms1.ACF_MDU_Yield.plot(ax=axes[0, 1])
+    ms2.ACF_MDU_Yield.plot(ax=axes[0, 1])
 
     axes[0, 1].legend(['I0', 'I1', 'I2'])
     axes[0, 1].set_title('Yield, MU')
 
-    ms0.Yield_ACF_D2D.plot(ax=axes[1, 1])
-    ms1.Yield_ACF_D2D.plot(ax=axes[1, 1])
-    ms2.Yield_ACF_D2D.plot(ax=axes[1, 1])
+    ms0.ACF_D2D_Yield.plot(ax=axes[1, 1])
+    ms1.ACF_D2D_Yield.plot(ax=axes[1, 1])
+    ms2.ACF_D2D_Yield.plot(ax=axes[1, 1])
 
     axes[1, 1].legend(['I0', 'I1', 'I2'])
     axes[1, 1].set_title('Yield, D2D')
 
-    ms0.Yield_ACF_Vul.plot(ax=axes[2, 1])
-    ms1.Yield_ACF_Vul.plot(ax=axes[2, 1])
-    ms2.Yield_ACF_Vul.plot(ax=axes[2, 1])
+    ms0.ACF_Vul_Yield.plot(ax=axes[2, 1])
+    ms1.ACF_Vul_Yield.plot(ax=axes[2, 1])
+    ms2.ACF_Vul_Yield.plot(ax=axes[2, 1])
 
     axes[2, 1].legend(['I0', 'I1', 'I2'])
     axes[2, 1].set_title('Yield, Vul')
-
 
     fig.tight_layout()
 
