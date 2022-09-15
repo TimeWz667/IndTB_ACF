@@ -27,9 +27,9 @@ class VulACF(BaseModel):
 
 
 class Intervention(BaseModel):
-    VulACF = VulACF()
     MU = MU()
     D2D = D2D()
+    VulACF = VulACF()
     PlainACF = PlainACF()
     T0_Bg = 2022
     T0_Vul = 2023

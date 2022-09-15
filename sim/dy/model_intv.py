@@ -32,10 +32,10 @@ class ModelIntv(Model):
                 f'ACF_{label}_Screened': screened.sum() / n,
                 f'ACF_{label}_Confirmed': confirmed.sum() / n,
                 f'ACF_{label}_Yield': pos.sum() / n,
-                f'ACF_{label}_TP': (tp_ds + tp_dr) / n,
-                f'ACF_{label}_DS_Fl': tp_ds / n,
-                f'ACF_{label}_DR_Fl': tp_dr_fl / n,
-                f'ACF_{label}_DR_Sl': tp_dr_sl / n,
+                f'ACF_{label}_TP': (tp_ds + tp_dr).sum() / n,
+                f'ACF_{label}_DS_Fl': tp_ds.sum() / n,
+                f'ACF_{label}_DR_Fl': tp_dr_fl.sum() / n,
+                f'ACF_{label}_DR_Sl': tp_dr_sl.sum() / n,
             }
         else:
             dy = np.zeros_like(y)
@@ -67,10 +67,10 @@ class ModelIntv(Model):
                 f'ACF_{label}_Screened': screened.sum() / n,
                 f'ACF_{label}_Confirmed': confirmed.sum() / n,
                 f'ACF_{label}_Yield': pos.sum() / n,
-                f'ACF_{label}_TP': (tp_ds + tp_dr) / n,
-                f'ACF_{label}_DS_Fl': tp_ds / n,
-                f'ACF_{label}_DR_Fl': tp_dr_fl / n,
-                f'ACF_{label}_DR_Sl': tp_dr_sl / n,
+                f'ACF_{label}_TP': (tp_ds + tp_dr).sum() / n,
+                f'ACF_{label}_DS_Fl': tp_ds.sum() / n,
+                f'ACF_{label}_DR_Fl': tp_dr_fl.sum() / n,
+                f'ACF_{label}_DR_Sl': tp_dr_sl.sum() / n,
             }
         else:
             dy = np.zeros_like(y)
@@ -101,7 +101,7 @@ class ModelIntv(Model):
         pos_sym, pos_cxr, pos_xpert, eligible = pars['pos_sym'], pars['pos_cxr'], pars['pos_xpert'], pars['eli']
         r_acf_mu, r_acf_d2d, p_dst = pars['r_acf_mu'], pars['r_acf_d2d'], pars['acf_dst_sens']
 
-        pos_vul = pars['pos_vul']
+        eli_vul = pars['eli_vul']
         r_acf_vul = r_acf_plain = 0
 
         if intv is not None:
@@ -116,11 +116,11 @@ class ModelIntv(Model):
             # Vulnerability-led ACF
             r_acf_vul, r_fu, r_lost = intv.modify_acf_vul(t, r_acf_vul, 0, 0)
             if r_acf_vul > 0:
-                dy += self._calc_vul_acf(y, r_acf_vul, r_fu, r_lost, eligible, pos_vul, pos_xpert, p_dst, mea=False)
+                dy += self._calc_vul_acf(y, r_acf_vul, r_fu, r_lost, eli_vul, pos_cxr, pos_xpert, p_dst, mea=False)
 
             # Plain ACF
-            r_acf_plain, r_fu, r_lost = intv.modify_acf_vul(t, r_acf_plain, 0, 0)
-            if r_acf_vul > 0:
+            r_acf_plain, r_fu, r_lost = intv.modify_acf_plain(t, r_acf_plain, 0, 0)
+            if r_acf_plain > 0:
                 dy += self._calc_vul_acf(y, r_acf_plain, r_fu, r_lost, eligible, pos_cxr, pos_xpert, p_dst, mea=False)
 
         return dy.reshape(-1)
@@ -132,7 +132,7 @@ class ModelIntv(Model):
         pos_sym, pos_cxr, pos_xpert, eligible = pars['pos_sym'], pars['pos_cxr'], pars['pos_xpert'], pars['eli']
         r_acf_mu, r_acf_d2d, p_dst = pars['r_acf_mu'], pars['r_acf_d2d'], pars['acf_dst_sens']
 
-        pos_vul = pars['pos_vul']
+        eli_vul = pars['eli_vul']
         r_acf_vul = r_acf_plain = 0
 
         mea_acf = {}
@@ -150,11 +150,11 @@ class ModelIntv(Model):
 
             # Vulnerability-led ACF
             r_acf_vul, r_fu, r_lost = intv.modify_acf_vul(t, r_acf_vul, 0, 0)
-            mea_acf.update(self._calc_vul_acf(y, r_acf_vul, r_fu, r_lost, eligible, pos_vul, pos_xpert, p_dst,
+            mea_acf.update(self._calc_vul_acf(y, r_acf_vul, r_fu, r_lost, eli_vul, pos_cxr, pos_xpert, p_dst,
                                               mea=True, label='Vul'))
 
             # Plain ACF
-            r_acf_plain, r_fu, r_lost = intv.modify_acf_vul(t, r_acf_plain, 0, 0)
+            r_acf_plain, r_fu, r_lost = intv.modify_acf_plain(t, r_acf_plain, 0, 0)
             mea_acf.update(self._calc_vul_acf(y, r_acf_plain, r_fu, r_lost, eligible, pos_cxr, pos_xpert, p_dst,
                                               mea=True, label='Plain'))
 
@@ -293,8 +293,8 @@ if __name__ == '__main__':
     _, ms0, _ = m0.simulate_onward(y1, p1, intv={'D2D': {'Scale': 0}, 'MU': {'Scale': 0}})
     # _, ms1, _ = m0.simulate_onward(y1, p1, intv={'D2D': {'Scale': 1}, 'MU': {'Scale': 1}})
     # _, ms2, _ = m0.simulate_onward(y1, p1, intv={'D2D': {'Scale': 2}, 'MU': {'Scale': 2}})
-    _, ms1, _ = m0.simulate_onward(y1, p1, intv={'VulACF': {'Coverage': 0.2}})
-    _, ms2, _ = m0.simulate_onward(y1, p1, intv={'VulACF': {'Coverage': 0.5}})
+    _, ms1, _ = m0.simulate_onward(y1, p1, intv={'VulACF': {'Coverage': 0.15}})
+    _, ms2, _ = m0.simulate_onward(y1, p1, intv={'PlainACF': {'Coverage': 0.15}})
     # _, ms2, _ = m.simulate_onward(y1, p0, intv={'ACF': {'Yield': .05, 'HiRisk': False}})
     # _, ms3, _ = m.simulate_onward(y1, p0, intv={'ACF': {'Yield': .03, 'HiRisk': True}})
 

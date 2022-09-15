@@ -166,8 +166,6 @@ if __name__ == '__main__':
     y1, ms, msg = m.simulate_to_baseline(p0, 2022)
 
     _, ms1, _ = m.simulate_onward(y1, p0)
-    # _, ms2, _ = m.simulate_onward(y1, p0, intv={'ACF': {'Yield': .05, 'HiRisk': False}})
-    # _, ms3, _ = m.simulate_onward(y1, p0, intv={'ACF': {'Yield': .03, 'HiRisk': True}})
 
     fig, axes = plt.subplots(2, 2)
 
