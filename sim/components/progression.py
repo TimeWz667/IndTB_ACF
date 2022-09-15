@@ -35,6 +35,21 @@ class Progression(Process):
 
             (I.RSt_DS, I.Asym_DS, r_rel_st, 'inc_remote'),
             (I.RSt_DR, I.Asym_DR, r_rel_st, 'inc_remote'),
+
+            (I.FLatTPT_DS, I.Asym_DS, 0.3 * r_act, 'inc_recent'),
+            (I.FLatTPT_DR, I.Asym_DR, 0.3 * r_act, 'inc_recent'),
+
+            (I.SLatTPT_DS, I.Asym_DS, 0.3 * r_react, 'inc_remote'),
+            (I.SLatTPT_DR, I.Asym_DR, 0.3 * r_react, 'inc_remote'),
+
+            (I.RLowTPT_DS, I.Asym_DS, 0.3 * r_rel_tc, 'inc_remote'),
+            (I.RLowTPT_DR, I.Asym_DR, 0.3 * r_rel_tc, 'inc_remote'),
+
+            (I.RHighTPT_DS, I.Asym_DS, 0.3 * r_rel_td, 'inc_remote'),
+            (I.RHighTPT_DR, I.Asym_DR, 0.3 * r_rel_td, 'inc_remote'),
+
+            (I.RStTPT_DS, I.Asym_DS, 0.3 * r_rel_st, 'inc_remote'),
+            (I.RStTPT_DR, I.Asym_DR, 0.3 * r_rel_st, 'inc_remote'),
         ]
 
         inc_h = list(inc_l)
@@ -52,6 +67,13 @@ class Progression(Process):
         for fr, to in zip(I.RHigh, I.RSt):
             prog.append((fr, to, r_stab, 'stab'))
 
+        for fr, to in zip(I.FLatTPT, I.SLatTPT):
+            prog.append((fr, to, r_stab, 'stab'))
+        for fr, to in zip(I.RLowTPT, I.RStTPT):
+            prog.append((fr, to, r_stab, 'stab'))
+        for fr, to in zip(I.RHighTPT, I.RStTPT):
+            prog.append((fr, to, r_stab, 'stab'))
+
         r_sc = pars['r_sc']
         for fr in I.Infectious_DS:
             prog.append((fr, I.RHigh_DS, r_sc, 'self_cure'))
@@ -60,7 +82,7 @@ class Progression(Process):
             prog.append((fr, I.RHigh_DR, r_sc, 'self_cure'))
 
         r_clear = pars['r_clear']
-        for fr in I.SLat + I.RSt:
+        for fr in I.SLat + I.RSt + I.SLatTPT + I.RStTPT:
             prog.append((fr, I.U, r_clear, 'self_clear'))
 
         for fr, to in zip(I.Asym, I.Sym):

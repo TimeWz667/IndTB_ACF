@@ -22,18 +22,18 @@ class Model:
     def update_parameters(pars):
         pars = dict(pars)
 
-        pars['sus'] = sus = np.zeros((I.N_State_TB, I.N_State_Strata))
+        pars['sus'] = sus = np.zeros((I.N_State_TB, 1))
         sus[I.U] = 1
         sus[I.SLat] = pars['rr_sus_ltbi']
         sus[I.RLow] = pars['rr_sus_ltbi']
         sus[I.RHigh] = pars['rr_sus_ltbi']
         sus[I.RSt] = pars['rr_sus_ltbi']
 
-        pars['trans_ds'] = trans = np.zeros((I.N_State_TB, I.N_State_Strata))
+        pars['trans_ds'] = trans = np.zeros((I.N_State_TB, 1))
         trans[I.Infectious_DS] = 1
         trans[I.Asym] *= pars['rr_inf_asym']
 
-        pars['trans_dr'] = trans = np.zeros((I.N_State_TB, I.N_State_Strata))
+        pars['trans_dr'] = trans = np.zeros((I.N_State_TB, 1))
         trans[I.Infectious_DR] = 1
         trans[I.Asym] *= pars['rr_inf_asym']
 

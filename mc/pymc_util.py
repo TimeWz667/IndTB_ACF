@@ -43,7 +43,7 @@ class DataModel:
         with dm:
             p_comorb = pm.Uniform('p_comorb', 0, 0.5)
             rr_risk_comorb = pm.Uniform('rr_risk_comorb', 1, 30)
-            beta_ds = pm.Uniform('beta_ds', 1, 15)
+            beta_ds = pm.Uniform('beta_ds', 1, 20)
             rr_beta_dr = pm.Uniform('rr_beta_dr', 0.9, 1.1)
             rr_inf_asym = pm.Uniform('rr_inf_asym', 0, 1)
 

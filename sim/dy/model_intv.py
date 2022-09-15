@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from sim.intv import Demography, BgACF, VulACF
 from sim.dy import Model
 import sim.dy.keys as I
 from sim.intv import Intervention
@@ -14,154 +15,45 @@ class ModelIntv(Model):
     def __init__(self, year0=1970):
         Model.__init__(self, year0)
         self.Parent = Model(year0)
-
-    @staticmethod
-    def _calc_bg_acf(y,  r_acf, eli, pos_screen, pos_confirm, p_dst, mea=False, label='bg'):
-        arrived = r_acf * y
-        screened = arrived * eli
-        confirmed = screened * pos_screen
-        pos = confirmed * pos_confirm
-        tp_ds, tp_dr = pos[I.Infectious_DS], pos[I.Infectious_DR]
-        tp_dr_fl = tp_dr * (1 - p_dst)
-        tp_dr_sl = tp_dr - tp_dr_fl
-
-        if mea:
-            n = y.sum()
-            return {
-                f'ACF_{label}_Footfall': arrived.sum() / n,
-                f'ACF_{label}_Screened': screened.sum() / n,
-                f'ACF_{label}_Confirmed': confirmed.sum() / n,
-                f'ACF_{label}_Yield': pos.sum() / n,
-                f'ACF_{label}_TP': (tp_ds + tp_dr).sum() / n,
-                f'ACF_{label}_DS_Fl': tp_ds.sum() / n,
-                f'ACF_{label}_DR_Fl': tp_dr_fl.sum() / n,
-                f'ACF_{label}_DR_Sl': tp_dr_sl.sum() / n,
-            }
-        else:
-            dy = np.zeros_like(y)
-            dy[I.Infectious_DS, :2] -= tp_ds
-            dy[I.Infectious_DR, :2] -= tp_dr
-            dy[I.Txf_Pub_DS, :2] += tp_ds.sum(0)
-            dy[I.Txf_Pub_DR, :2] += tp_dr_fl.sum(0)
-            dy[I.Txs_Pub_DR, :2] += tp_dr_sl.sum(0)
-            return dy
-
-    @staticmethod
-    def _calc_vul_acf(y, cov, r_fu, r_lost, eli, pos_screen, pos_confirm, p_dst, mea=False, label='vul'):
-        n = y.sum()
-        n_target = cov * y.sum()
-        r_acf = n_target / (eli * y[:, :2]).sum()
-        arrived = r_acf * y[:, :2]
-        screened = arrived * eli
-        confirmed = screened * pos_screen
-        pos = confirmed * pos_confirm
-        tp_ds, tp_dr = pos[I.Infectious_DS], pos[I.Infectious_DR]
-        tp_dr_fl = tp_dr * (1 - p_dst)
-        tp_dr_sl = tp_dr - tp_dr_fl
-
-        fp_tpt = pos[I.LTBI]
-
-        if mea:
-            return {
-                f'ACF_{label}_Footfall': arrived.sum() / n,
-                f'ACF_{label}_Screened': screened.sum() / n,
-                f'ACF_{label}_Confirmed': confirmed.sum() / n,
-                f'ACF_{label}_Yield': pos.sum() / n,
-                f'ACF_{label}_TP': (tp_ds + tp_dr).sum() / n,
-                f'ACF_{label}_DS_Fl': tp_ds.sum() / n,
-                f'ACF_{label}_DR_Fl': tp_dr_fl.sum() / n,
-                f'ACF_{label}_DR_Sl': tp_dr_sl.sum() / n,
-            }
-        else:
-            dy = np.zeros_like(y)
-            dy[I.Infectious_DS, :2] -= tp_ds
-            dy[I.Infectious_DR, :2] -= tp_dr
-            dy[I.Txf_Pub_DS, :2] += tp_ds.sum(0)
-            dy[I.Txf_Pub_DR, :2] += tp_dr_fl.sum(0)
-            dy[I.Txs_Pub_DR, :2] += tp_dr_sl.sum(0)
-
-            if r_fu > 0:
-                lost = r_lost * y[:, 2:]
-                dy[:, 2:] -= lost
-                dy[:, :2] += lost
-
-            return dy
+        self.Demography = Demography(I)
+        self.BgACF = BgACF(I)
+        self.VulACF = VulACF(I)
 
     def __call__(self, t, y, pars, intv=None):
         y = y.reshape((I.N_State_TB, I.N_State_Strata * 2))
-        dy = np.zeros_like(y)
 
-        dy[:, :2] = self.Parent(t, y[:, :2], pars).reshape((-1, 2))
+        dy = self.Demography.calc_dy(t, y, pars)
+        dy += self.Transmission.calc_dy(t, y, pars)
+        dy[:, :2] += self.Progression.calc_dy(t, y[:, :2], pars)
+        dy[:, :2] += self.Cascade.calc_dy(t, y[:, :2], pars)
+
         if y[:, 2:].sum() > 0:
-            pars_acf = dict(pars)
+            dy[:, 2:] += self.Progression.calc_dy(t, y[:, 2:], pars)
+            dy[:, 2:] += self.Cascade.calc_dy(t, y[:, 2:], pars)
 
-            dy[:, 2:] = self.Parent(t, y[:, 2:], pars_acf).reshape((-1, 2))
+        # Baseline ACF
+        dy += self.BgACF.calc_dy(t, y, pars, intv)
 
-        # ACF, background
-        pos_sym, pos_cxr, pos_xpert, eligible = pars['pos_sym'], pars['pos_cxr'], pars['pos_xpert'], pars['eli']
-        r_acf_mu, r_acf_d2d, p_dst = pars['r_acf_mu'], pars['r_acf_d2d'], pars['acf_dst_sens']
-
-        eli_vul = pars['eli_vul']
-        r_acf_vul = r_acf_plain = 0
-
-        if intv is not None:
-            r_acf_mu, r_acf_d2d, p_dst = intv.modify_acf_bg(t, r_acf_mu, r_acf_d2d, p_dst)
-            # MDU
-            if r_acf_mu > 0:
-                dy[:, :2] += self._calc_bg_acf(y[:, :2], r_acf_mu, eligible, pos_cxr, pos_xpert, p_dst, mea=False)
-            # D2D
-            if r_acf_d2d > 0:
-                dy[:, :2] += self._calc_bg_acf(y[:, :2], r_acf_d2d, eligible, pos_sym, pos_xpert, p_dst, mea=False)
-
-            # Vulnerability-led ACF
-            r_acf_vul, r_fu, r_lost = intv.modify_acf_vul(t, r_acf_vul, 0, 0)
-            if r_acf_vul > 0:
-                dy += self._calc_vul_acf(y, r_acf_vul, r_fu, r_lost, eli_vul, pos_cxr, pos_xpert, p_dst, mea=False)
-
-            # Plain ACF
-            r_acf_plain, r_fu, r_lost = intv.modify_acf_plain(t, r_acf_plain, 0, 0)
-            if r_acf_plain > 0:
-                dy += self._calc_vul_acf(y, r_acf_plain, r_fu, r_lost, eligible, pos_cxr, pos_xpert, p_dst, mea=False)
+        # Vulnerability-led ACF
+        dy += self.VulACF.calc_dy(t, y, pars, intv)
 
         return dy.reshape(-1)
 
     def measure(self, t, y, pars, intv=None):
         y = y.reshape((I.N_State_TB, I.N_State_Strata * 2))
 
-        # ACF metrics
-        pos_sym, pos_cxr, pos_xpert, eligible = pars['pos_sym'], pars['pos_cxr'], pars['pos_xpert'], pars['eli']
-        r_acf_mu, r_acf_d2d, p_dst = pars['r_acf_mu'], pars['r_acf_d2d'], pars['acf_dst_sens']
-
-        eli_vul = pars['eli_vul']
-        r_acf_vul = r_acf_plain = 0
-
-        mea_acf = {}
-
-        if intv is not None:
-            r_acf_mu, r_acf_d2d, p_dst = intv.modify_acf_bg(t, r_acf_mu, r_acf_d2d, p_dst)
-
-            # MDU
-            mea_acf.update(self._calc_bg_acf(y[:, :2], r_acf_mu, eligible, pos_cxr, pos_xpert, p_dst,
-                                             mea=True, label='MDU'))
-
-            # D2D
-            mea_acf.update(self._calc_bg_acf(y[:, :2], r_acf_mu, eligible, pos_cxr, pos_xpert, p_dst,
-                                             mea=True, label='D2D'))
-
-            # Vulnerability-led ACF
-            r_acf_vul, r_fu, r_lost = intv.modify_acf_vul(t, r_acf_vul, 0, 0)
-            mea_acf.update(self._calc_vul_acf(y, r_acf_vul, r_fu, r_lost, eli_vul, pos_cxr, pos_xpert, p_dst,
-                                              mea=True, label='Vul'))
-
-            # Plain ACF
-            r_acf_plain, r_fu, r_lost = intv.modify_acf_plain(t, r_acf_plain, 0, 0)
-            mea_acf.update(self._calc_vul_acf(y, r_acf_plain, r_fu, r_lost, eligible, pos_cxr, pos_xpert, p_dst,
-                                              mea=True, label='Plain'))
+        mea = {'Time': t}
+        self.Demography.measure(t, y, pars, mea)
 
         # baseline metrics
-        y = y[:, :2] + y[:, 2:]
-        mea = Model.measure(self, t, y, pars)
-        mea.update(mea_acf)
+        y_all = y[:, :2] + y[:, 2:]
+        self.Transmission.measure(t, y_all, pars, mea)
+        self.Progression.measure(t, y_all, pars, mea)
+        self.Cascade.measure(t, y_all, pars, mea)
+
+        # ACF metrics
+        self.BgACF.measure(t, y, pars, intv, mea)
+        self.VulACF.measure(t, y, pars, intv, mea)
         return mea
 
     @staticmethod
@@ -187,16 +79,16 @@ class ModelIntv(Model):
         self._update_triage(y0, p, spec)
 
         # Baseline ACF
-        if 'r_acf_mu' not in p:
+        if 'r_acf_mdu' not in p:
             self._find_r_acf0(y0, p)
 
         return y0r, p
 
     @staticmethod
-    def _find_r_acf0(y0, p, yield_mu=104.5 / 3e6, yield_d2d=430 / 3e6):
+    def _find_r_acf0(y0, p, yield_mdu=104.5 / 3e6, yield_d2d=430 / 3e6):
         pos_sym, pos_cxr, pos_xpert, eligible = p['pos_sym'], p['pos_cxr'], p['pos_xpert'], p['eli']
 
-        p['r_acf_mu'] = yield_mu / ((y0 * eligible * pos_cxr * pos_xpert).sum() / y0.sum())
+        p['r_acf_mdu'] = yield_mdu / ((y0 * eligible * pos_cxr * pos_xpert).sum() / y0.sum())
         p['r_acf_d2d'] = yield_d2d / ((y0 * eligible * pos_sym * pos_xpert).sum() / y0.sum())
 
     @staticmethod
@@ -272,7 +164,6 @@ class ModelIntv(Model):
 
         ms = [self.measure(t, ys.sol(t), p, intv) for t in t_out if t >= t_start]
         ms = pd.DataFrame(ms).set_index('Time')
-
         return ys, ms, {'succ': True}
 
 
@@ -290,16 +181,17 @@ if __name__ == '__main__':
 
     y1, p1 = m0.find_baseline(p0, 2022)
 
-    _, ms0, _ = m0.simulate_onward(y1, p1, intv={'D2D': {'Scale': 0}, 'MU': {'Scale': 0}})
-    # _, ms1, _ = m0.simulate_onward(y1, p1, intv={'D2D': {'Scale': 1}, 'MU': {'Scale': 1}})
-    # _, ms2, _ = m0.simulate_onward(y1, p1, intv={'D2D': {'Scale': 2}, 'MU': {'Scale': 2}})
-    _, ms1, _ = m0.simulate_onward(y1, p1, intv={'VulACF': {'Coverage': 0.15}})
-    _, ms2, _ = m0.simulate_onward(y1, p1, intv={'PlainACF': {'Coverage': 0.15}})
-    # _, ms2, _ = m.simulate_onward(y1, p0, intv={'ACF': {'Yield': .05, 'HiRisk': False}})
-    # _, ms3, _ = m.simulate_onward(y1, p0, intv={'ACF': {'Yield': .03, 'HiRisk': True}})
+    _, ms0, _ = m0.simulate_onward(y1, p1, intv={'D2D': {'Scale': 0}, 'MDU': {'Scale': 0}})
+    # _, ms1, _ = m0.simulate_onward(y1, p1, intv={'D2D': {'Scale': 1}, 'MDU': {'Scale': 1}})
+    # _, ms2, _ = m0.simulate_onward(y1, p1, intv={'D2D': {'Scale': 2}, 'MDU': {'Scale': 2}})
+    _, ms1, _ = m0.simulate_onward(y1, p1, intv={'VulACF': {'Coverage': 0.15, 'FollowUp': 0.8, 'Duration': 2}})
+    _, ms2, _ = m0.simulate_onward(y1, p1, intv={'VulACF': {'Coverage': 0.15, 'FollowUp': 1, 'Duration': 2}})
+    # _, ms2, _ = m0.simulate_onward(y1, p1, intv={'PlainACF': {'Coverage': 0.15}})
 
-    print('MU', ms1.ACF_MDU_Yield[2022.5] * 1e5, 104.5 / 3e6 * 1e5)
+    print('MDU', ms1.ACF_MDU_Yield[2022.5] * 1e5, 104.5 / 3e6 * 1e5)
     print('D2D', ms1.ACF_D2D_Yield[2022.5] * 1e5, 430 / 3e6 * 1e5)
+
+    print(ms1[['IncR', 'ACF_Vul_Yield']])
 
     fig, axes = plt.subplots(3, 2)
 
@@ -329,7 +221,7 @@ if __name__ == '__main__':
     ms2.ACF_MDU_Yield.plot(ax=axes[0, 1])
 
     axes[0, 1].legend(['I0', 'I1', 'I2'])
-    axes[0, 1].set_title('Yield, MU')
+    axes[0, 1].set_title('Yield, MDU')
 
     ms0.ACF_D2D_Yield.plot(ax=axes[1, 1])
     ms1.ACF_D2D_Yield.plot(ax=axes[1, 1])

@@ -6,7 +6,7 @@ __author__ = 'Chu-Chang Ku'
 __all__ = ['Intervention']
 
 
-class MU(BaseModel):
+class MDU(BaseModel):
     Scale: confloat(ge=0) = 0
 
 
@@ -27,7 +27,7 @@ class VulACF(BaseModel):
 
 
 class Intervention(BaseModel):
-    MU = MU()
+    MDU = MDU()
     D2D = D2D()
     VulACF = VulACF()
     PlainACF = PlainACF()
@@ -36,7 +36,7 @@ class Intervention(BaseModel):
 
     def modify_acf_bg(self, t, r_acf_mu, r_acf_d2d, p_dst):
         if t >= self.T0_Bg:
-            r_acf_mu *= self.MU.Scale
+            r_acf_mu *= self.MDU.Scale
             r_acf_d2d *= self.D2D.Scale
         return r_acf_mu, r_acf_d2d, p_dst
 
@@ -44,7 +44,7 @@ class Intervention(BaseModel):
         if t >= self.T0_Vul:
             cov = self.VulACF.Coverage
             if self.VulACF.Duration > 0:
-                r_fu = 1 / max(self.VulACF.FollowUp, self.VulACF.Duration)
+                r_fu = 1 / self.VulACF.FollowUp
                 r_lost = 1 / self.VulACF.Duration
         return cov, r_fu, r_lost
 
@@ -52,14 +52,14 @@ class Intervention(BaseModel):
         if t >= self.T0_Vul:
             cov = self.PlainACF.Coverage
             if self.PlainACF.Duration > 0:
-                r_fu = 1 / max(self.PlainACF.FollowUp, self.PlainACF.Duration)
+                r_fu = 1 / self.PlainACF.FollowUp
                 r_lost = 1 / self.PlainACF.Duration
         return cov, r_fu, r_lost
 
 
 if __name__ == '__main__':
     intv_list = {
-        'VulACF': {'Scale': 0.5},
+        'VulACF': {'Coverage': 0.5},
     }
 
     intv = Intervention.parse_obj(intv_list)

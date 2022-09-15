@@ -87,11 +87,16 @@ Infectious.sort()
 
 
 # LTBI
-LTBI = FLat + SLat + RLow + RHigh + RSt + FLatTPT + SLatTPT + RLowTPT + RHighTPT + RStTPT
-LTBI.sort()
+LTBI0 = FLat + SLat + RLow + RHigh + RSt
+LTBI0.sort()
 
 LTBI_TPT = FLatTPT + SLatTPT + RLowTPT + RHighTPT + RStTPT
 LTBI_TPT.sort()
+
+LTBI = LTBI0 + LTBI_TPT
+LTBI.sort()
+
+
 
 
 # Second dim
