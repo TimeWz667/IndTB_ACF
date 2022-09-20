@@ -60,8 +60,11 @@ g_fu <- stats %>%
   scale_x_discrete("") +
   scale_y_continuous("Averted cases, %", labels = scales::percent) + 
   scale_fill_brewer("Test frequency\n/Follow-up period", palette = 3, 
-                    labels = c(Vul_0_0="No follow-up", Vul_2_6="6mo / 2yr", Vul_3_3="3mo / 3yr", Vul_3_6="6mo / 3yr")) +
-  facet_grid(Population~., labeller = labeller(Population=c(dy_lo="Low comorbidity", dy_hi = "High comorbidity"))) +
+                    labels = c(Vul_0_0="No follow-up", 
+                               Vul_2_3="3mo / 2yr", Vul_2_6="6mo / 2yr", 
+                               Vul_3_3="3mo / 3yr", Vul_3_6="6mo / 3yr")) +
+  facet_grid(Population~., labeller = labeller(Population=c(dy_lo="High threshold (0.7%)", 
+                                                            dy_hi = "Low threshold (17.5%)"))) +
   theme(axis.text.x = element_blank())
 
 
