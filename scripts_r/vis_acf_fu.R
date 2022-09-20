@@ -51,8 +51,8 @@ g_fu <- stats %>%
   group_by(Scenario, Population) %>% 
   summarise(
     M = mean(AvtInc),
-    L = quantile(AvtInc, 0.025),
-    U = quantile(AvtInc, 0.975)
+    L = quantile(AvtInc, 0.05),
+    U = quantile(AvtInc, 0.95)
   ) %>% 
   ggplot() +
   geom_histogram(aes(x = Scenario, y = M, fill = Scenario), colour="black", stat = "identity") +

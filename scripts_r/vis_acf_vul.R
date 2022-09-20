@@ -24,6 +24,7 @@ stats0 <- stats %>%
 
 stats <- stats %>% 
   mutate(
+    N_Footfall = pmax(ACF_Plain_Footfall, ACF_Vul_Footfall),
     N_Screened = pmax(ACF_Plain_Screened, ACF_Vul_Screened),
     N_Confirmed = pmax(ACF_Plain_Confirmed, ACF_Vul_Confirmed),
     N_Fl_DS = pmax(ACF_Plain_DS_Fl, ACF_Vul_DS_Fl),
@@ -35,23 +36,13 @@ stats <- stats %>%
     C_Total = C_Screened + C_Confirmed + C_Tx,
   ) %>% 
   select(Key, Type, Population, Coverage, Pop0, Inc1 = IncR, Mor1 = MorR,
-         N_Screened, N_Confirmed, starts_with("C_")) %>% 
+         N_Footfall, N_Screened, N_Confirmed, starts_with("C_")) %>% 
   left_join(stats0) %>% 
   mutate(
     AvtInc = (Inc0 - Inc1) / Inc0,
     AvtMor = (Mor0 - Mor1) / Mor0,
     across(starts_with("N_"), function(x) x / Pop0),
     across(starts_with("C_"), function(x) x / Pop0)
-  )
-
-
-
-g_avt <- stats %>% 
-  group_by(Coverage, Population, Type) %>% 
-  summarise(
-    M = mean(AvtInc),
-    L = quantile(AvtInc, 0.025),
-    U = quantile(AvtInc, 0.975)
   ) %>% 
   mutate(
     Gp = case_when(
@@ -61,7 +52,18 @@ g_avt <- stats %>%
       T ~ "None"
     )
   ) %>% 
-  filter(Gp != "None") %>% 
+  filter(Gp != "None")
+
+
+
+g_avt <- stats %>% 
+  group_by(Gp, Coverage, Population, Type) %>% 
+  summarise(
+    M = mean(AvtInc),
+    L = quantile(AvtInc, 0.025),
+    U = quantile(AvtInc, 0.975)
+  ) %>% 
+  ungroup() %>% 
   ggplot() + 
   geom_ribbon(aes(x = Coverage, ymin = L, ymax = U, fill = Gp), alpha = 0.1) +
   geom_line(aes(x = Coverage, y = M, colour = Gp)) +
@@ -78,6 +80,34 @@ g_avt <- stats %>%
 
 
 g_avt
+
+
+# 
+# stats %>% 
+#   mutate(kg = paste0(Gp, Key)) %>% 
+#   ggplot() +
+#   geom_line(aes(x = C_Total, y = AvtInc, colour = Gp, group = kg)) +
+#   scale_color_discrete("Scenario", labels=c(cxr="Universal screening",
+#                                             Vul_hi="Vulnerability-led, high comorbidity",
+#                                             Vul_lo="Vulnerability-led, low comorbidity"
+#   )) +
+#   scale_y_continuous("Averted cases, %", labels = scales::percent) + 
+#   scale_x_continuous("Total ACF cost, per year-person", 
+#                      labels = scales::percent)
+# 
+# 
+# stats %>% 
+#   mutate(kg = paste0(Gp, Key)) %>% 
+#   ggplot() +
+#   geom_line(aes(x = N_Footfall, y = AvtInc, colour = Gp, group = kg)) +
+#   scale_color_discrete("Scenario", labels=c(cxr="Universal screening",
+#                                             Vul_hi="Vulnerability-led, high comorbidity",
+#                                             Vul_lo="Vulnerability-led, low comorbidity"
+#   )) +
+#   scale_y_continuous("Averted cases, %", labels = scales::percent) + 
+#   scale_x_continuous("People reached, per year-person", 
+#                      labels = scales::percent) +
+
 
 
 
