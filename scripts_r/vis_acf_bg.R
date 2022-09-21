@@ -5,7 +5,7 @@ theme_set(theme_bw() + theme(text = element_text(family = "sans")))
 
 
 cost <- read_csv(here::here("data", "cost.csv"))
-cost <- setNames(cost$M, cost$Item)
+cost <- as.list(setNames(cost$M, cost$Item))
 
 
 
@@ -25,11 +25,11 @@ g_combine <- sims %>%
   ungroup() %>% 
   mutate(
     Index = case_when(
-      Index == "Avt_D2D" ~ "DTD screening",
+      Index == "Avt_D2D" ~ "D2D screening",
       Index == "Avt_MU" ~ "MDU screening",
       Index == "Avt_MU+D2D" ~ "Both"
     ),
-    Index = factor(Index, c("MDU screening", "DTD screening", "Both"))
+    Index = factor(Index, c("MDU screening", "D2D screening", "Both"))
   ) %>% 
   ggplot() + 
   geom_histogram(aes(x = Index, y = M), stat = "identity") + 
@@ -39,22 +39,6 @@ g_combine <- sims %>%
 
 
 sims <- read_csv(here::here("out", folder, "Sim_BgACF_ScaleUp.csv"))[-1]
-
-
-sims_cost <- sims %>% 
-  select(Key, Scale) %>% 
-  distinct() %>% 
-  mutate(
-    C_CXR = cost_fn$CXR(n()),
-    C_Sym = cost_fn$Sym(n()),
-    C_Xpert = cost_fn$Xpert(n()),
-    C_Tx_Fl = cost_fn$Tx_Fl(n()),
-    C_Tx_Sl = cost_fn$Tx_Sl(n())
-  )
-
-
-sims <- sims %>% 
-  left_join(sims_cost)
 
 
 g_trend <- sims %>% 
@@ -71,6 +55,7 @@ g_trend <- sims %>%
   ggplot() +
   geom_ribbon(aes(x = Time, ymin = L, ymax = U, fill = Scale), alpha = 0.1) + 
   geom_line(aes(x = Time, y = M, colour = Scale)) + 
+  scale_x_continuous("Year") +
   scale_y_continuous("Incidence, per 100 000", labels = scales::number_format(scale = 1e5)) +
   scale_color_discrete("", labels = c(Baseline="Baseline", 
                                       `1x`="Chennai ACF coverage", `2x`="Coverage x2", `4x`="Coverage x4")) +
@@ -82,9 +67,12 @@ g_trend
 
 
 stats <- sims %>% 
-  left_join(sims_cost) %>% 
   mutate(
-    Cost = Reach_ACF_MU1 * C_CXR + Reach_ACF_D2D2 * C_Sym + (Reach_ACF_MU2 + Reach_ACF_D2D2) * C_Xpert
+    Cost = ACF_MDU_Screened * cost$CXR + ACF_D2D_Screened * cost$Sym, 
+    Cost = Cost + (ACF_MDU_Confirmed + ACF_D2D_Confirmed) * cost$Xpert,
+    Cost = Cost + (ACF_D2D_DS_Fl + ACF_D2D_DR_Fl) * cost$Tx_Fl,
+    Cost = Cost + (ACF_MDU_DS_Fl + ACF_MDU_DR_Fl) * cost$Tx_Fl,
+    Cost = Cost + (ACF_MDU_DR_Sl + ACF_D2D_DR_Sl) * cost$Tx_Sl
     # Cost = Cost + Yield_ACF_MU * C_Tx_Fl + Yield_ACF_D2D * C_Tx_Fl
   ) %>% 
   select(Time, Pop, IncR, MorR, Cost, Key, Scale) %>% 
@@ -127,11 +115,11 @@ g_ce <- stats %>%
 
 
 
-ggsave(g_combine, filename = here::here("out", folder, "g_bg_acf_combine.pdf"), width = 6, height = 4.5)
+ggsave(g_combine, filename = here::here("docs", "g_bg_acf_combine.pdf"), width = 6, height = 4.5)
 
-ggsave(g_trend, filename = here::here("out", folder, "g_bg_acf_trend.pdf"), width = 6, height = 4.5)
+ggsave(g_trend, filename = here::here("docs", "g_bg_acf_trend.pdf"), width = 6, height = 4.5)
 
-ggsave(g_ce, filename = here::here("out", folder, "g_bg_acf_ce.pdf"), width = 6, height = 4.5)
+ggsave(g_ce, filename = here::here("docs", "g_bg_acf_ce.pdf"), width = 6, height = 4.5)
 
 
 

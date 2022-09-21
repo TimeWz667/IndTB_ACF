@@ -68,7 +68,6 @@ class Model:
 
     def __call__(self, t, y, pars):
         y = y.reshape((I.N_State_TB, I.N_State_Strata))
-
         dy = self.Demography.calc_dy(t, y, pars)
         dy += self.Transmission.calc_dy(t, y, pars)
         dy += self.Progression.calc_dy(t, y, pars)
@@ -84,7 +83,6 @@ class Model:
         self.Transmission.measure(t, y, pars, mea)
         self.Progression.measure(t, y, pars, mea)
         self.Cascade.measure(t, y, pars, mea)
-
         return mea
 
     @staticmethod
