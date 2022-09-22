@@ -85,7 +85,7 @@ class ModelIntv(Model):
         return y0r, p
 
     @staticmethod
-    def _find_r_acf0(y0, p, yield_mdu=104.5 / 3e6, yield_d2d=430 / 3e6):
+    def _find_r_acf0(y0, p, yield_mdu=430 / 3e6, yield_d2d=104.5 / 3e6):
         pos_sym, pos_cxr, pos_xpert, eligible = p['pos_sym'], p['pos_cxr'], p['pos_xpert'], p['eli']
 
         p['r_acf_mdu'] = yield_mdu / ((y0 * eligible * pos_cxr * pos_xpert).sum() / y0.sum())
@@ -188,8 +188,8 @@ if __name__ == '__main__':
     _, ms2, _ = m0.simulate_onward(y1, p1, intv={'VulACF': {'Coverage': 0.15, 'FollowUp': 1, 'Duration': 2}})
     # _, ms2, _ = m0.simulate_onward(y1, p1, intv={'PlainACF': {'Coverage': 0.15}})
 
-    print('MDU', ms1.ACF_MDU_Yield[2022.5] * 1e5, 104.5 / 3e6 * 1e5)
-    print('D2D', ms1.ACF_D2D_Yield[2022.5] * 1e5, 430 / 3e6 * 1e5)
+    print('MDU', ms1.ACF_MDU_Yield[2022.5] * 1e5, 430 / 3e6 * 1e5)
+    print('D2D', ms1.ACF_D2D_Yield[2022.5] * 1e5, 104.5 / 3e6 * 1e5)
 
     print(ms1[['IncR', 'ACF_Vul_Yield']])
 

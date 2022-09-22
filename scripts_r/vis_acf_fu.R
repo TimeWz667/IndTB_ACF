@@ -48,11 +48,14 @@ stats <- stats %>%
 
 
 g_fu <- stats %>% 
+  mutate(
+    Scenario = factor(Scenario, c("Vul_0_0", "Vul_2_6", "Vul_2_3", "Vul_3_6", "Vul_3_3"))
+  ) %>% 
   group_by(Scenario, Population) %>% 
   summarise(
     M = mean(AvtInc),
-    L = quantile(AvtInc, 0.05),
-    U = quantile(AvtInc, 0.95)
+    L = quantile(AvtInc, 0.25),
+    U = quantile(AvtInc, 0.75)
   ) %>% 
   ggplot() +
   geom_histogram(aes(x = Scenario, y = M, fill = Scenario), colour="black", stat = "identity") +
@@ -66,6 +69,38 @@ g_fu <- stats %>%
   facet_grid(Population~., labeller = labeller(Population=c(dy_lo="High threshold (0.7%)", 
                                                             dy_hi = "Low threshold (17.5%)"))) +
   theme(axis.text.x = element_blank())
+
+
+
+stats <- read_csv(here::here("out", "dy_hi", "Sim_VulACF_fudur_stats.csv"))[-1] %>% 
+  mutate(
+    N_Screened = ACF_Vul_Screened,
+    N_Confirmed = ACF_Vul_Confirmed,
+    N_Fl_DS = ACF_Vul_DS_Fl,
+    N_Fl_DR = ACF_Vul_DR_Fl,
+    N_Sl_DR = ACF_Vul_DR_Sl,
+    C_Screened = N_Screened * cost$Vul + cost$CXR,
+    C_Confirmed = N_Confirmed * cost$Xpert,
+    C_Tx = (N_Fl_DS + N_Fl_DR) * cost$Tx_Fl + (N_Fl_DR + N_Sl_DR) * cost$Tx_Sl,
+    C_Total = C_Screened + C_Confirmed + C_Tx,
+  ) %>% 
+  select(Key, Scenario, FollowUp, Duration, Coverage, Pop0, Inc1 = IncR, Mor1 = MorR,
+         N_Screened, N_Confirmed, starts_with("C_"))
+
+
+stats %>% 
+  filter(Scenario != "Baseline") %>% 
+  left_join(stats %>% filter(Scenario == "Baseline") %>% select(Key, Inc0 = Inc1, Mor0  = Mor1)) %>% 
+  mutate(
+    dE = Inc0 - Inc1,
+    dC = C_Total
+  ) %>% 
+  filter(Duration > 0) %>% 
+  ggplot() +
+  geom_contour_filled(aes(x = FollowUp, y = Duration, z = dC / dE)) +
+  scale_x_continuous("Follow-up test, months", labels = scales::number_format(scale = 12)) +
+  scale_fill_brewer("cost per averted case", direction = -1)
+
 
 
 ggsave(g_fu, filename = here::here("docs", "g_fu.png"), width = 6, height = 6)

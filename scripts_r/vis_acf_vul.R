@@ -68,11 +68,11 @@ g_avt <- stats %>%
   geom_ribbon(aes(x = Coverage, ymin = L, ymax = U, fill = Gp), alpha = 0.1) +
   geom_line(aes(x = Coverage, y = M, colour = Gp)) +
   scale_y_continuous("Averted cases, %", labels = scales::percent) + 
-  scale_x_continuous("People screened, per year-person", 
+  scale_x_continuous("Annual ACF screening, percentage population", 
                      labels = scales::percent) +
-  scale_color_discrete("Scenario", labels=c(cxr="Universal screening",
-                                            Vul_hi="Vulnerability-led, high comorbidity",
-                                            Vul_lo="Vulnerability-led, low comorbidity"
+  scale_color_discrete("Scenario", labels=c(cxr="Untargeted screening",
+                                            Vul_hi="Vulnerability-led, low threshold",
+                                            Vul_lo="Vulnerability-led, high threshold"
                                             )) +
   guides(fill = guide_none()) +
   theme(legend.position = "right")
