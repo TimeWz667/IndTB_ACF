@@ -97,8 +97,9 @@ stats %>%
   ) %>% 
   filter(Duration > 0) %>% 
   ggplot() +
-  geom_contour_filled(aes(x = FollowUp, y = Duration, z = dC / dE)) +
-  scale_x_continuous("Follow-up test, months", labels = scales::number_format(scale = 12)) +
+  geom_contour_filled(aes(x = 1 / FollowUp, y = Duration, z = dC / dE)) +
+  scale_x_continuous("Tests per year") +
+  # scale_x_continuous("Follow-up test, months", labels = scales::number_format(scale = 12)) +
   scale_fill_brewer("cost per averted case", direction = -1)
 
 
