@@ -13,6 +13,9 @@ folder <- "dy_hi"
 sims <- read_csv(here::here("out", folder, "Sim_BgACF_IncrementalAverted.csv"))[-1]
 
 
+pop.size <- 3e6
+
+
 
 g_combine <- sims %>% 
   pivot_longer(-Key, names_to = "Index") %>% 
@@ -102,7 +105,7 @@ stats <- sims %>%
 g_ce <- stats %>% 
   filter(Scale != "Baseline") %>% 
   left_join(stats %>% filter(Scale == "Baseline") %>% select(Key, IncN0 = IncN)) %>% 
-  mutate(Cost = Cost * 1e6, Avt = (IncN0 - IncN) * 1e6) %>% 
+  mutate(Cost = Cost * pop.size, Avt = (IncN0 - IncN) / IncN0) %>% 
   group_by(Scale) %>% 
   summarise(
     across(c(Cost, Avt), list(
@@ -120,24 +123,16 @@ g_ce <- stats %>%
     )
   ) %>% 
   ggplot() +
-  geom_pointrange(aes(x = Avt_M, y = Cost_M, ymin = Cost_L, ymax = Cost_U)) +
-  geom_linerange(aes(xmin = Avt_L, xmax = Avt_U, y = Cost_M)) +
-  geom_segment(aes(x = 0, xend = Avt_M, y = 0, yend = Cost_M), linetype = "dashed") +
-  geom_text(aes(x = Avt_M, y = Cost_M, label = Scale, hjust = - 0.2, vjust = 1.5)) +
-  scale_y_continuous("Total ACF cost, in millions of 2019 USD", labels = scales::number_format(scale = 1e-6)) +
-  scale_x_continuous("Incident case averted, 2023-2030") +
+  geom_pointrange(aes(x = Cost_M, y = Avt_M, ymin = Avt_L, ymax = Avt_U)) +
+  geom_linerange(aes(xmin = Cost_L, xmax = Cost_U, y = Avt_M)) +
+  geom_segment(aes(x = 0, yend = Avt_M, y = 0, xend = Cost_M), linetype = "dashed") +
+  geom_text(aes(y = Avt_M, x = Cost_M, label = Scale, hjust = - 0.2, vjust = 1.5)) +
+  scale_x_continuous("Total ACF cost, in millions of 2019 USD", labels = scales::number_format(scale = 1e-6)) +
+  scale_y_continuous("Incident case averted, %, 2023-2030", labels = scales::percent) +
   expand_limits(x = 0, y = 0)
 
 
-stats %>% 
-  filter(Scale != "Baseline") %>% 
-  left_join(stats %>% filter(Scale == "Baseline") %>% select(Key, IncN0 = IncN)) %>% 
-  mutate(Cost = Cost * 1e6, Avt = (IncN0 - IncN) * 1e6) %>% 
-  group_by(Scale) %>% 
-  summarise(ce = mean(Cost) / mean(Avt))
-
-
-
+g_ce
 
 
 ss <- sims %>% 
@@ -152,6 +147,7 @@ ss <- sims %>%
     MorN = sum(MorR * Pop) / Pop[1],
     N_Screen = sum(N_Screen * Pop) / Pop[1]
   )
+
 
 tab_yield <- ss %>% 
   filter(Scale != "Baseline") %>% 

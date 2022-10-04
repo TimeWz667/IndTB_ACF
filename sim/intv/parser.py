@@ -43,9 +43,11 @@ class Intervention(BaseModel):
     def modify_acf_vul(self, t, cov, r_fu, r_lost):
         if t >= self.T0_Vul:
             cov = self.VulACF.Coverage
-            if self.VulACF.Duration > 0 and self.VulACF.FollowUp > 0:
-                r_fu = 1 / self.VulACF.FollowUp
+            if self.VulACF.Duration > 0:
                 r_lost = 1 / self.VulACF.Duration
+
+            if self.VulACF.FollowUp > 0:
+                r_fu = 1 / self.VulACF.FollowUp
         return cov, r_fu, r_lost
 
     def modify_acf_plain(self, t, cov, r_fu, r_lost):

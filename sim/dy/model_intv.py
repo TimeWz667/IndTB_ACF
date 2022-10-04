@@ -104,12 +104,12 @@ class ModelIntv(Model):
         vul = eligible.copy()
         vul[:, 0] = 0
 
-        pos_cxr = np.zeros_like(y0)
+        pos_cxr = np.ones((I.N_State_TB, 1))
         pos_cxr[I.U] = (1 - spec_cxr)
         pos_cxr[I.LTBI] = (1 - spec_cxr)
         pos_cxr[I.Infectious] = sens_cxr
 
-        pos_xpert = np.zeros_like(y0)
+        pos_xpert = np.ones((I.N_State_TB, 1))
         pos_xpert[I.U] = (1 - spec_xpert)
         pos_xpert[I.LTBI] = (1 - spec_xpert)
         pos_xpert[I.Infectious] = sens_xpert
@@ -132,12 +132,12 @@ class ModelIntv(Model):
             opt = minimize_scalar(fn, 0.99, args=(y0, ), method='bounded', bounds=(0.5, 1))
             spec_sym = opt.x
 
-        pos_sym = np.zeros_like(y0)
+        pos_sym = np.ones((I.N_State_TB, 1))
         pos_sym[I.LTBI + I.Asym] = (1 - spec_sym)
         pos_sym[I.U] = (1 - spec_sym)
         pos_sym[I.Sym + I.ExSym] = 1
 
-        pos_vul = np.zeros_like(y0)
+        pos_vul = np.ones_like(y0)
         pos_vul[:, 1] = 1
 
         p.update({

@@ -76,14 +76,17 @@ class BgACF:
 class VulACF:
     def __init__(self, keys):
         self.Keys = keys
+        self.Recap = True
 
     def _calc_vul_acf(self, y, cov, r_fu, r_lost, eli, pos_screen, pos_confirm, p_dst, mea=False, label='vul'):
         I = self.Keys
         n = y.sum()
+
         n_target = cov * y.sum()
-        r_acf = n_target / (eli * y[:, :2]).sum()
-        r_acf = min(12, r_acf)
-        arrived = r_acf * y[:, :2]
+        eli = np.hstack([eli, eli])
+        r_acf = n_target / (eli * y).sum()
+        r_acf = min(24, r_acf)
+        arrived = r_acf * y
         screened = arrived * eli
         confirmed = screened * pos_screen
         pos = confirmed * pos_confirm
@@ -96,19 +99,23 @@ class VulACF:
             m = _mea_acf(n, arrived, screened, confirmed, pos, tp_ds, tp_dr_fl, tp_dr_sl, label)
         else:
             dy = np.zeros_like(y)
-            dy[I.Infectious_DS, :2] -= tp_ds
-            dy[I.Infectious_DR, :2] -= tp_dr
-            dy[I.Txf_Pub_DS, :2] += tp_ds.sum(0)
-            dy[I.Txf_Pub_DR, :2] += tp_dr_fl.sum(0)
-            dy[I.Txs_Pub_DR, :2] += tp_dr_sl.sum(0)
+            dy[I.Infectious_DS] -= tp_ds
+            dy[I.Infectious_DR] -= tp_dr
+            dy[I.Txf_Pub_DS] += tp_ds.sum(0)
+            dy[I.Txf_Pub_DR] += tp_dr_fl.sum(0)
+            dy[I.Txs_Pub_DR] += tp_dr_sl.sum(0)
+
+            dy[:, :2] -= neg[:, :2]
+            dy[:, 2:] += neg[:, :2]
 
             fp = pos[I.LTBI0]
-            dy[I.LTBI0, :2] -= fp
-            dy[I.LTBI_TPT, :2] += fp
+            dy[I.LTBI0] -= fp
+            dy[I.LTBI_TPT] += fp
 
             complete = y[I.LTBI_TPT] * 2
-            dy[I.LTBI0] += complete
+
             dy[I.LTBI_TPT] -= complete
+            dy[I.LTBI0, :2] += complete[:, :2] + complete[:, 2:]
 
         if r_lost <= 0:
             if mea:
@@ -133,9 +140,6 @@ class VulACF:
             dy[I.Txf_Pub_DS, 2:] += tp_ds.sum(0)
             dy[I.Txf_Pub_DR, 2:] += tp_dr_fl.sum(0)
             dy[I.Txs_Pub_DR, 2:] += tp_dr_sl.sum(0)
-
-            dy[:, :2] -= neg
-            dy[:, 2:] += neg
 
             lost = r_lost * y[:, 2:]
             dy[:, 2:] -= lost

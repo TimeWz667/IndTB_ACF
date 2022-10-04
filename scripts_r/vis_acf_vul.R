@@ -82,6 +82,41 @@ g_avt <- stats %>%
 g_avt
 
 
+stats %>% 
+  group_by(Gp, Coverage, Population, Type) %>% 
+  summarise(
+    M = mean(AvtInc),
+    L = quantile(AvtInc, 0.025),
+    U = quantile(AvtInc, 0.975)
+  ) %>% 
+  ungroup() %>% 
+  ggplot() + 
+  geom_ribbon(aes(x = Coverage, ymin = L, ymax = U, fill = Gp), alpha = 0.1) +
+  geom_line(aes(x = Coverage, y = M, colour = Gp)) +
+  scale_y_continuous("Incident case averted, %, 2023-2030", labels = scales::percent) + 
+  scale_x_continuous("Annual ACF screening, percentage population", 
+                     labels = scales::percent) +
+  scale_color_discrete("Scenario", labels=c(cxr="Untargeted screening",
+                                            Vul_hi="Vulnerability-led, low threshold",
+                                            Vul_lo="Vulnerability-led, high threshold"
+  )) +
+  guides(fill = guide_none()) +
+  theme(legend.position = "right")
+
+
+stats %>% 
+  group_by(Gp, Coverage, Population, Type) %>% 
+  ggplot() + 
+  geom_line(aes(x = C_Total, y = AvtInc, group = Key), alpha = 0.1) +
+  scale_y_continuous("Averted cases, %", labels = scales::percent) + 
+  scale_x_continuous("Annual ACF screening, percentage population") +
+  facet_wrap(.~Gp, labeller = labeller(Gp = c(cxr="Untargeted screening",
+                                              Vul_hi="Vulnerability-led, low threshold",
+                                              Vul_lo="Vulnerability-led, high threshold")))
+
+
+
+
 # 
 # stats %>% 
 #   mutate(kg = paste0(Gp, Key)) %>% 
