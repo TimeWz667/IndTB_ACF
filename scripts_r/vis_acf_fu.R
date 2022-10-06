@@ -18,18 +18,20 @@ stats <- local({
       N_Fl_DS = ACF_Vul_DS_Fl,
       N_Fl_DR = ACF_Vul_DR_Fl,
       N_Sl_DR = ACF_Vul_DR_Sl,
+      N_TPT = ACF_Vul_Yield - N_Fl_DS - N_Fl_DR - N_Sl_DR,
       C_Screened = N_Screened * cost$Vul + cost$CXR,
       C_Confirmed = N_Confirmed * cost$Xpert,
-      C_Tx = (N_Fl_DS + N_Fl_DR) * cost$Tx_Fl + (N_Fl_DR + N_Sl_DR) * cost$Tx_Sl,
+      C_Tx = (N_Fl_DS + N_Fl_DR + N_TPT) * cost$Tx_Fl + (N_Fl_DR + N_Sl_DR) * cost$Tx_Sl,
       C_Total = C_Screened + C_Confirmed + C_Tx,
       N_Screened = ACF_Vulfu_Screened,
       N_Confirmed = ACF_Vulfu_Confirmed,
       N_Fl_DS = ACF_Vulfu_DS_Fl,
       N_Fl_DR = ACF_Vulfu_DR_Fl,
       N_Sl_DR = ACF_Vulfu_DR_Sl,
+      N_TPT = ACF_Vulfu_Yield - N_Fl_DS - N_Fl_DR - N_Sl_DR,
       C_ScreenedFu = N_Screened * cost$Vul + cost$CXR,
       C_ConfirmedFu = N_Confirmed * cost$Xpert,
-      C_TxFu = (N_Fl_DS + N_Fl_DR) * cost$Tx_Fl + (N_Fl_DR + N_Sl_DR) * cost$Tx_Sl,
+      C_TxFu = (N_Fl_DS + N_Fl_DR + N_TPT) * cost$Tx_Fl + (N_Fl_DR + N_Sl_DR) * cost$Tx_Sl,
       C_TotalFu = C_ScreenedFu + C_ConfirmedFu + C_TxFu,
       PPV_Vul = ifelse(ACF_Vul_Yield > 0, ACF_Vul_TP / ACF_Vul_Yield, 0),
       PPV_Vulfu = ifelse(ACF_Vulfu_Yield > 0, ACF_Vulfu_TP / ACF_Vulfu_Yield, 0),
@@ -62,7 +64,7 @@ stats <- local({
   
   stats %>% 
     group_by(FollowUp, Duration) %>% 
-    summarise(across(c(AvtInc, CER_Total, CER_Test, dC_Total, starts_with("PPV")), list(
+    summarise(across(c(AvtInc, CER_Total, CER_Test, dC_Total, starts_with("PPV"), starts_with("C_")), list(
       M = mean,
       L = function(x) quantile(x, 0.025),
       U = function(x) quantile(x, 0.975)
@@ -90,6 +92,15 @@ s1 <- stats %>%
 
 
 
+
+
+stats %>% 
+  filter(startsWith(Index, "C_")) %>% 
+  filter(!(Index %in% c("C_Total", "C_TotalFu"))) %>% 
+  filter(Duration %in% 3:4) %>% 
+  ggplot() +
+  geom_histogram(aes(x = Duration, y = M, fill = Index), stat = "identity") +
+  facet_wrap(n_fu~.)
 
 
 
