@@ -88,7 +88,7 @@ class ModelIntv(Model):
     def _find_r_acf0(y0, p, yield_mdu=430 / 3e6, yield_d2d=104.5 / 3e6):
         pos_sym, pos_cxr, pos_xpert, eligible = p['pos_sym'], p['pos_cxr'], p['pos_xpert'], p['eli']
 
-        p['r_acf_mdu'] = yield_mdu / ((y0 * eligible * pos_cxr * pos_xpert).sum() / y0.sum())
+        p['r_acf_mdu'] = yield_mdu / ((y0 * eligible * (1 - (1 - pos_sym) * (1 - pos_cxr)) * pos_xpert).sum() / y0.sum())
         p['r_acf_d2d'] = yield_d2d / ((y0 * eligible * pos_sym * pos_xpert).sum() / y0.sum())
 
     @staticmethod
@@ -96,13 +96,14 @@ class ModelIntv(Model):
         sens_cxr, spec_cxr = p['acf_cxr_sens'], p['acf_cxr_spec']
         sens_xpert, spec_xpert = p['acf_xpert_sens'], p['acf_xpert_spec']
 
-        eligible = np.ones_like(y0)
+        eligible = np.ones((y0.shape[0], 1))
         eligible[I.Tx_DS] = 0
         eligible[I.Tx_DR] = 0
         eligible[I.LTBI_TPT] = 0
 
-        vul = eligible.copy()
-        vul[:, 0] = 0
+        pos_vul = np.ones((I.N_State_TB, 4))
+        pos_vul[:, 0] = 0
+        pos_vul[:, 0] = 0
 
         pos_cxr = np.ones((I.N_State_TB, 1))
         pos_cxr[I.U] = (1 - spec_cxr)
@@ -132,17 +133,13 @@ class ModelIntv(Model):
             opt = minimize_scalar(fn, 0.99, args=(y0, ), method='bounded', bounds=(0.5, 1))
             spec_sym = opt.x
 
-        pos_sym = np.ones((I.N_State_TB, 1))
+        pos_sym = np.zeros((I.N_State_TB, 1))
         pos_sym[I.LTBI + I.Asym] = (1 - spec_sym)
         pos_sym[I.U] = (1 - spec_sym)
         pos_sym[I.Sym + I.ExSym] = 1
 
-        pos_vul = np.ones_like(y0)
-        pos_vul[:, 1] = 1
-
         p.update({
             'eli': eligible,
-            'eli_vul': vul,
             'pos_sym': pos_sym,
             'pos_vul': pos_vul,
             'pos_cxr': pos_cxr,
@@ -177,15 +174,15 @@ if __name__ == '__main__':
     m0 = ModelIntv()
 
     p0 = prior[2]
-    p0.update({'beta_ds': 5, 'rr_risk_comorb': 20, 'rr_beta_dr': 1.05, 'p_comorb': 0.3})
+    p0.update({'beta_ds': 25, 'rr_risk_comorb': 20, 'rr_beta_dr': 1.05, 'p_comorb': 0.007})
 
     y1, p1 = m0.find_baseline(p0, 2022)
 
     _, ms0, _ = m0.simulate_onward(y1, p1, intv={'D2D': {'Scale': 0}, 'MDU': {'Scale': 0}})
-    # _, ms1, _ = m0.simulate_onward(y1, p1, intv={'D2D': {'Scale': 1}, 'MDU': {'Scale': 1}})
-    # _, ms2, _ = m0.simulate_onward(y1, p1, intv={'D2D': {'Scale': 2}, 'MDU': {'Scale': 2}})
-    _, ms1, _ = m0.simulate_onward(y1, p1, intv={'VulACF': {'Coverage': 0.15, 'FollowUp': 0.8, 'Duration': 2}})
-    _, ms2, _ = m0.simulate_onward(y1, p1, intv={'VulACF': {'Coverage': 0.15, 'FollowUp': 1, 'Duration': 2}})
+    _, ms1, _ = m0.simulate_onward(y1, p1, intv={'D2D': {'Scale': 1}, 'MDU': {'Scale': 1}})
+    _, ms2, _ = m0.simulate_onward(y1, p1, intv={'D2D': {'Scale': 2}, 'MDU': {'Scale': 2}})
+    # _, ms1, _ = m0.simulate_onward(y1, p1, intv={'VulACF': {'Coverage': 0.15, 'FollowUp': 0.8, 'Duration': 2}})
+    # _, ms2, _ = m0.simulate_onward(y1, p1, intv={'VulACF': {'Coverage': 0.15, 'FollowUp': 0.2, 'Duration': 2}})
     # _, ms2, _ = m0.simulate_onward(y1, p1, intv={'PlainACF': {'Coverage': 0.15}})
 
     print('MDU', ms1.ACF_MDU_Yield[2022.5] * 1e5, 430 / 3e6 * 1e5)
@@ -205,6 +202,8 @@ if __name__ == '__main__':
     ms0.IncR.plot(ax=axes[1, 0])
     ms1.IncR.plot(ax=axes[1, 0])
     ms2.IncR.plot(ax=axes[1, 0])
+    print(ms1.IncR)
+    print(ms2.IncR)
 
     axes[1, 0].legend(['I0', 'I1', 'I2'])
     axes[1, 0].set_title('Incidence')

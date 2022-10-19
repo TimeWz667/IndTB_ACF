@@ -1,7 +1,6 @@
-﻿Item,M
-Sym,0.14
-CXR,1.5
-Vul,0.52
-Xpert,10.5
-Tx_Fl,2.42
-Tx_Sl,100
+﻿Item,D2D,MDU,VUL
+Eligible,0.14,0,0.5
+Screen,0,1.5,1.5
+Confirm,8.04,2.49,10.19
+Tx_Fl,2.42,2.42,2.42
+Tx_Sl,100,100,100
