@@ -221,9 +221,9 @@ class VulACF:
         r_acf = min(24, n_target / (eli * y).sum())
 
         arrived = r_acf * y
-        screened0 = arrived * eli
-        screened = screened0 * pos_sym
-        confirmed = screened * pos_cxr
+        screened = arrived * eli
+        # screened = screened0 * pos_sym
+        confirmed = screened * (1 - (1 - pos_cxr) * (1 - pos_sym))
         pos = confirmed * pos_xpert
         neg = screened - pos
         tp_ds, tp_dr = pos[I.Infectious_DS], pos[I.Infectious_DR]
@@ -232,7 +232,7 @@ class VulACF:
 
         if mea:
             m = _mea_acf(n, arrived, screened, confirmed, pos, tp_ds, tp_dr_fl, tp_dr_sl, 'Plain',
-                         n_sym=screened0.sum(),
+                         n_sym=screened.sum(),
                          n_cxr=screened.sum(), n_xpert=confirmed.sum())
         else:
             dy = np.zeros_like(y)
