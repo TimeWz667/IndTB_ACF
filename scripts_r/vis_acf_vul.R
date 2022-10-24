@@ -4,8 +4,12 @@ library(ggpubr)
 theme_set(theme_bw() + theme(text = element_text(family = "sans")))
 
 
+pop.size <- 3e6
+
+
 cost <- read_csv(here::here("data", "cost.csv"))
-cost <- as.list(setNames(cost$M, cost$Item))
+cost_plain <- as.list(setNames(cost$Plain, cost$Item))
+cost <- as.list(setNames(cost$Vul, cost$Item))
 
 
 ds <- c("dy_hi", "dy_lo")
@@ -27,11 +31,15 @@ stats <- stats %>%
     N_Footfall = pmax(ACF_Plain_Footfall, ACF_Vul_Footfall),
     N_Screened = pmax(ACF_Plain_Screened, ACF_Vul_Screened),
     N_Confirmed = pmax(ACF_Plain_Confirmed, ACF_Vul_Confirmed),
+    N_Vul = pmax(ACF_Plain_Vul, ACF_Vul_Vul),
+    N_Sym = pmax(ACF_Plain_Sym, ACF_Vul_Sym),
+    N_CXR = pmax(ACF_Plain_CXR, ACF_Vul_CXR),
+    N_Xpert = pmax(ACF_Plain_Xpert, ACF_Vul_Xpert),
     N_Fl_DS = pmax(ACF_Plain_DS_Fl, ACF_Vul_DS_Fl),
     N_Fl_DR = pmax(ACF_Plain_DR_Fl, ACF_Vul_DR_Fl),
     N_Sl_DR = pmax(ACF_Plain_DR_Sl, ACF_Vul_DR_Sl),
-    C_Screened = N_Screened * ifelse(Type == "VulACF", cost$Vul + cost$CXR, cost$CXR),
-    C_Confirmed = N_Confirmed * cost$Xpert,
+    C_Screened = N_Sym * cost$Sym + N_Vul * cost$Vul + N_CXR * cost$CXR,
+    C_Confirmed = ACF_Vul_Xpert * cost$Xpert + ACF_Plain_Xpert * cost_plain$Xpert,
     C_Tx = (N_Fl_DS + N_Fl_DR) * cost$Tx_Fl + (N_Fl_DR + N_Sl_DR) * cost$Tx_Sl,
     C_Total = C_Screened + C_Confirmed + C_Tx,
   ) %>% 
@@ -41,8 +49,8 @@ stats <- stats %>%
   mutate(
     AvtInc = (Inc0 - Inc1) / Inc0,
     AvtMor = (Mor0 - Mor1) / Mor0,
-    across(starts_with("N_"), function(x) x / Pop0),
-    across(starts_with("C_"), function(x) x / Pop0)
+    across(starts_with("N_"), function(x) x / Pop0 * pop.size),
+    across(starts_with("C_"), function(x) x / Pop0 * pop.size)
   ) %>% 
   mutate(
     Gp = case_when(
@@ -56,7 +64,7 @@ stats <- stats %>%
 
 
 
-g_avt <- stats %>% 
+g_avt1 <- stats %>% 
   group_by(Gp, Coverage, Population, Type) %>% 
   summarise(
     M = mean(AvtInc),
@@ -68,7 +76,7 @@ g_avt <- stats %>%
   geom_ribbon(aes(x = Coverage, ymin = L, ymax = U, fill = Gp), alpha = 0.1) +
   geom_line(aes(x = Coverage, y = M, colour = Gp)) +
   scale_y_continuous("Averted cases, %", labels = scales::percent) + 
-  scale_x_continuous("Annual ACF screening, percentage population", 
+  scale_x_continuous("Annual ACF screened, percentage population", 
                      labels = scales::percent) +
   scale_color_discrete("Scenario", labels=c(cxr="Untargeted screening",
                                             Vul_hi="Vulnerability-led, low threshold",
@@ -79,10 +87,7 @@ g_avt <- stats %>%
 
 
 
-g_avt
-
-
-stats %>% 
+g_vul_imp <- stats %>% 
   group_by(Gp, Coverage, Population, Type) %>% 
   summarise(
     M = mean(AvtInc),
@@ -91,81 +96,44 @@ stats %>%
   ) %>% 
   ungroup() %>% 
   ggplot() + 
-  geom_ribbon(aes(x = Coverage, ymin = L, ymax = U, fill = Gp), alpha = 0.1) +
   geom_line(aes(x = Coverage, y = M, colour = Gp)) +
-  scale_y_continuous("Incident case averted, %, 2023-2030", labels = scales::percent) + 
-  scale_x_continuous("Annual ACF screening, percentage population", 
+  scale_y_continuous("Averted cases, %", labels = scales::percent) + 
+  scale_x_continuous("Annual ACF screened, percentage population", 
                      labels = scales::percent) +
   scale_color_discrete("Scenario", labels=c(cxr="Untargeted screening",
                                             Vul_hi="Vulnerability-led, low threshold",
                                             Vul_lo="Vulnerability-led, high threshold"
   )) +
   guides(fill = guide_none()) +
-  theme(legend.position = "right")
+  theme(legend.position = c(1, 0), legend.justification = c(1 + 0.05, -0.05))
 
 
-stats %>% 
+
+g_vul_ci <- stats %>% 
   group_by(Gp, Coverage, Population, Type) %>% 
+  summarise(across(c(AvtInc, C_Total), mean)) %>% 
+  ungroup() %>% 
   ggplot() + 
-  geom_line(aes(x = C_Total, y = AvtInc, group = Key), alpha = 0.1) +
+  geom_line(aes(x = C_Total, y = AvtInc, colour = Gp)) +
+  scale_x_continuous("Total ACF cost, in millions of 2019 USD", breaks=seq(0, 40, 10) * 1e6, labels = scales::number_format(scale = 1e-6)) + 
+  # scale_y_continuous("Incident case averted, %, 2023-2030", labels = scales::percent) +
   scale_y_continuous("Averted cases, %", labels = scales::percent) + 
-  scale_x_continuous("Annual ACF screening, percentage population") +
-  facet_wrap(.~Gp, labeller = labeller(Gp = c(cxr="Untargeted screening",
-                                              Vul_hi="Vulnerability-led, low threshold",
-                                              Vul_lo="Vulnerability-led, high threshold")))
+  scale_color_discrete("Scenario", labels=c(cxr="Untargeted screening",
+                                            Vul_hi="Vulnerability-led, low threshold",
+                                            Vul_lo="Vulnerability-led, high threshold"
+  )) +
+  expand_limits(x = 0, y = 0) +
+  theme(legend.position = c(1, 0), legend.justification = c(1 + 0.05, -0.05))
 
 
 
-
-# 
-# stats %>% 
-#   mutate(kg = paste0(Gp, Key)) %>% 
-#   ggplot() +
-#   geom_line(aes(x = C_Total, y = AvtInc, colour = Gp, group = kg)) +
-#   scale_color_discrete("Scenario", labels=c(cxr="Universal screening",
-#                                             Vul_hi="Vulnerability-led, high comorbidity",
-#                                             Vul_lo="Vulnerability-led, low comorbidity"
-#   )) +
-#   scale_y_continuous("Averted cases, %", labels = scales::percent) + 
-#   scale_x_continuous("Total ACF cost, per year-person", 
-#                      labels = scales::percent)
-# 
-# 
-# stats %>% 
-#   mutate(kg = paste0(Gp, Key)) %>% 
-#   ggplot() +
-#   geom_line(aes(x = N_Footfall, y = AvtInc, colour = Gp, group = kg)) +
-#   scale_color_discrete("Scenario", labels=c(cxr="Universal screening",
-#                                             Vul_hi="Vulnerability-led, high comorbidity",
-#                                             Vul_lo="Vulnerability-led, low comorbidity"
-#   )) +
-#   scale_y_continuous("Averted cases, %", labels = scales::percent) + 
-#   scale_x_continuous("People reached, per year-person", 
-#                      labels = scales::percent) +
-
-
-
-
-# g_yield <- sims %>% 
-#   mutate(
-#     p_hi = sprintf("Pr(High risk)=%s", scales::percent(P_Comorb, accuracy=.1)),
-#     OR_ComorbTB = factor(OR_ComorbTB),
-#     yield = - (N_Reached_M * 17.53) / dAvt_M 
-#   ) %>% 
-#   ggplot() +
-#   geom_ribbon(aes(x = yield, ymin = N_Reached_L, ymax = N_Reached_U), alpha = 0.1) +
-#   geom_line(aes(x = yield, y = N_Reached_M)) +
-#   scale_x_continuous("Cost per case averted, $") + 
-#   scale_y_continuous("Number of people screened per year", 
-#                      labels = scales::unit_format(unit = "K", scale = 1e-3)) + 
-#   facet_grid(.~p_hi, scales = 'free_x') +
-#   expand_limits(y = 0) +
-#   labs(caption = 'Population size: 1 million')
-# 
-# 
-# g_yield
+g_avt1
+g_vul_imp
+g_vul_ci
 
 
 ggsave(g_avt, filename = here::here("docs", "g_avt.png"), width = 6, height = 5)
+ggsave(g_vul_imp, filename = here::here("docs", "g_vul_imp.png"), width = 6, height = 5)
+ggsave(g_vul_ci, filename = here::here("docs", "g_vul_ci.png"), width = 6, height = 5)
 # ggsave(g_yield, filename = here::here("docs", "g_yield.png"), width = 6, height = 3)
 

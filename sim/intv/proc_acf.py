@@ -169,9 +169,9 @@ class VulACF:
                 dy[:, 2:] -= lost
                 dy[:, :2] += lost
 
-                complete = y[I.LTBI_TPT] * 2
-                dy[I.LTBI_TPT] -= complete
-                dy[I.LTBI0, :2] += complete[:, :2] + complete[:, 2:]
+            complete = y[I.LTBI_TPT] * 2
+            dy[I.LTBI_TPT] -= complete
+            dy[I.LTBI0, :2] += complete[:, :2] + complete[:, 2:]
 
             fp = pos[I.LTBI0]
             dy[I.LTBI0] -= fp
@@ -186,14 +186,15 @@ class VulACF:
         # Follow-up
         arrived = r_fu * y[:, 3]
         screened = arrived
-        confirmed = screened * pos_sym
-        pos = confirmed * pos_xpert
+        confirmed = screened * pos_sym.reshape(-1)
+        pos = confirmed * pos_xpert.reshape(-1)
         tp_ds, tp_dr = pos[I.Infectious_DS], pos[I.Infectious_DR]
         tp_dr_fl = tp_dr * (1 - p_dst)
         tp_dr_sl = tp_dr - tp_dr_fl
 
         if mea:
-            m.update(_mea_acf(n, arrived, screened, confirmed, pos, tp_ds, tp_dr_fl, tp_dr_sl, 'VulFu'))
+            m.update(_mea_acf(n, arrived, screened, confirmed, pos, tp_ds, tp_dr_fl, tp_dr_sl, 'VulFu',
+                              n_sym=screened0.sum(), n_xpert=confirmed.sum()))
         else:
             dy[I.Infectious_DS, 3] -= tp_ds
             dy[I.Infectious_DR, 3] -= tp_dr
@@ -212,7 +213,7 @@ class VulACF:
     def _calc_plain_acf(self, y, r_acf0, pars, mea=False):
         I = self.Keys
         pos_cxr, pos_xpert, p_dst = pars['pos_cxr'], pars['pos_xpert'], pars['acf_dst_sens']
-        eli = pars['eli']
+        pos_sym, eli = pars['pos_sym'], pars['eli']
 
         n = y.sum()
 
@@ -220,16 +221,18 @@ class VulACF:
         r_acf = min(24, n_target / (eli * y).sum())
 
         arrived = r_acf * y
-        screened = arrived * eli
+        screened0 = arrived * eli
+        screened = screened0 * pos_sym
         confirmed = screened * pos_cxr
         pos = confirmed * pos_xpert
-
+        neg = screened - pos
         tp_ds, tp_dr = pos[I.Infectious_DS], pos[I.Infectious_DR]
         tp_dr_fl = tp_dr * (1 - p_dst)
         tp_dr_sl = tp_dr - tp_dr_fl
 
         if mea:
             m = _mea_acf(n, arrived, screened, confirmed, pos, tp_ds, tp_dr_fl, tp_dr_sl, 'Plain',
+                         n_sym=screened0.sum(),
                          n_cxr=screened.sum(), n_xpert=confirmed.sum())
         else:
             dy = np.zeros_like(y)

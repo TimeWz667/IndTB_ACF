@@ -9,7 +9,7 @@ pop.size <- 3e6
 
 stats <- local({
   cost <- read_csv(here::here("data", "cost.csv"))
-  cost <- as.list(setNames(cost$M, cost$Item))
+  cost <- as.list(setNames(cost$Vul, cost$Item))
   
   stats <- read_csv(here::here("out", "dy_hi", "Sim_VulACF_fudur_stats.csv"))[-1] %>% 
     mutate(
@@ -19,22 +19,22 @@ stats <- local({
       N_Fl_DR = ACF_Vul_DR_Fl,
       N_Sl_DR = ACF_Vul_DR_Sl,
       N_TPT = ACF_Vul_Yield - N_Fl_DS - N_Fl_DR - N_Sl_DR,
-      C_Screened = N_Screened * (cost$Vul + cost$CXR),
-      C_Confirmed = N_Confirmed * cost$Xpert,
+      C_Screened = ACF_Vul_Vul * cost$Vul + ACF_Vul_Sym * cost$Sym + ACF_Vul_CXR * cost$CXR,
+      C_Confirmed = ACF_Vul_Xpert * cost$Xpert,
       C_Tx = (N_Fl_DS + N_Fl_DR + N_TPT) * cost$Tx_Fl + (N_Fl_DR + N_Sl_DR) * cost$Tx_Sl,
       C_Total = C_Screened + C_Confirmed + C_Tx,
-      N_Screened = ACF_Vulfu_Screened,
-      N_Confirmed = ACF_Vulfu_Confirmed,
-      N_Fl_DS = ACF_Vulfu_DS_Fl,
-      N_Fl_DR = ACF_Vulfu_DR_Fl,
-      N_Sl_DR = ACF_Vulfu_DR_Sl,
-      N_TPT = ACF_Vulfu_Yield - N_Fl_DS - N_Fl_DR - N_Sl_DR,
-      C_ScreenedFu = N_Screened * (cost$Vul + cost$CXR),
-      C_ConfirmedFu = N_Confirmed * cost$Xpert,
+      N_Screened = ACF_VulFu_Screened,
+      N_Confirmed = ACF_VulFu_Confirmed,
+      N_Fl_DS = ACF_VulFu_DS_Fl,
+      N_Fl_DR = ACF_VulFu_DR_Fl,
+      N_Sl_DR = ACF_VulFu_DR_Sl,
+      N_TPT = ACF_VulFu_Yield - N_Fl_DS - N_Fl_DR - N_Sl_DR,
+      C_ScreenedFu = ACF_VulFu_Sym * cost$Sym + ACF_VulFu_CXR * cost$CXR,
+      C_ConfirmedFu = ACF_VulFu_Xpert * cost$Xpert,
       C_TxFu = (N_Fl_DS + N_Fl_DR + N_TPT) * cost$Tx_Fl + (N_Fl_DR + N_Sl_DR) * cost$Tx_Sl,
       C_TotalFu = C_ScreenedFu + C_ConfirmedFu + C_TxFu,
       PPV_Vul = ifelse(ACF_Vul_Yield > 0, ACF_Vul_TP / ACF_Vul_Yield, 0),
-      PPV_Vulfu = ifelse(ACF_Vulfu_Yield > 0, ACF_Vulfu_TP / ACF_Vulfu_Yield, 0),
+      PPV_VulFu = ifelse(ACF_VulFu_Yield > 0, ACF_VulFu_TP / ACF_VulFu_Yield, 0),
     ) %>% 
     select(Key, Scenario, FollowUp, Duration, Coverage, Pop0, Inc1 = IncR, Mor1 = MorR,
            N_Screened, N_Confirmed, starts_with("C_"), starts_with('PPV'))
@@ -59,7 +59,8 @@ stats <- local({
       CER_Total = dC_Total / dE,
       CER_Test = dC_Test / dE,
       dC_Total = dC_Total / Pop0 * pop.size,
-      dC_Test = dC_Test / Pop0 * pop.size 
+      dC_Test = dC_Test / Pop0 * pop.size,
+      across(starts_with("C_"), function(x) x / Pop0 * pop.size)
     )
   
   stats %>% 
@@ -91,13 +92,6 @@ s1 <- stats %>%
   mutate(Duration = as.factor(Duration))
 
 
-stats %>% 
-  filter(startsWith(Index, "dC_")) %>% 
-  filter(!(Index %in% c("C_Total", "C_TotalFu"))) %>% 
-  filter(Duration %in% 3:4) %>% 
-  ggplot() +
-  geom_histogram(aes(x = Duration, y = M, fill = Index), stat = "identity") +
-  facet_wrap(n_fu~.)
 
 
 g_fudur <- s1 %>% 
@@ -138,6 +132,14 @@ g_fudur_ce <- s1 %>%
 g_fudur_ce
 
 
+
+txt <- s1 %>% 
+  filter(Index %in% c("AvtInc", "dC_Total")) %>% 
+  filter(Duration == 4 & n_fu > 0) %>% 
+  select(n_fu, Duration, Index, M) %>% 
+  pivot_wider(names_from = Index, values_from = M)
+
+
 g_fudur_cost <- s1 %>% 
   filter(Index %in% c("AvtInc", "dC_Total")) %>% 
   select(n_fu, Duration, Index, M) %>% 
@@ -148,15 +150,61 @@ g_fudur_cost <- s1 %>%
   geom_hline(data = s0 %>% filter(Index == "AvtInc"), aes(yintercept = M[1]), linetype = 2) + 
   geom_hline(data = s0 %>% filter(Index == "AvtInc"), aes(yintercept = L[1]), linetype = 3) + 
   geom_hline(data = s0 %>% filter(Index == "AvtInc"), aes(yintercept = U[1]), linetype = 3) + 
-  scale_x_continuous("Total ACF cost, in millions of 2019 USD", breaks=seq(5, 25, 5) * 1e6, labels = scales::number_format(scale = 1e-6)) + 
+  geom_text(data = txt, aes(y = AvtInc * 1.02, x = dC_Total * 0.99, label = n_fu)) +
+  scale_x_continuous("Total ACF cost, in millions of 2019 USD", breaks=seq(8, 20, 2) * 1e6, labels = scales::number_format(scale = 1e-6, accuracy = 1)) + 
   # scale_y_continuous("Incident case averted, %, 2023-2030", labels = scales::percent) +
   scale_y_continuous("", labels = scales::percent) +
   scale_colour_discrete("Follow-up period, year", guide = guide_legend(reverse = T)) + 
-  expand_limits(y = 0) +
-  theme(legend.position = "None")
+  expand_limits(y = 0, x = 7e6) +
+  theme(legend.position = "None") +
+  labs(caption = "*Coverage=20% of total population per year\n*Numbers annotate the number of follow-up screening per year")
 
 
-g_fudur_cost  
+g_fudur_cost
+
+
+g_fudur_cpart <- stats %>% 
+  filter((n_fu == 2 & Duration ==4 ) | (n_fu == 4 & Duration == 2)) %>% 
+  filter(startsWith(Index, "C_")) %>% 
+  filter(!(Index %in% c("C_Total", "C_TotalFu"))) %>% 
+  mutate(
+    Type = ifelse(endsWith(Index, "Fu"), "Follow-up", "Initial ACF"),
+    Scenario = ifelse(n_fu == 2, "4 years X 2", "2 years X 4"),
+    Source = case_when(
+      startsWith(Index, "C_Confirm") ~ "Confirmation",
+      startsWith(Index, "C_Screened") ~ "Screening",
+      startsWith(Index, "C_Tx") ~ "Treatment",
+      T ~ "Total"
+    ),
+    Source = factor(Source, c("Screening", "Confirmation", "Treatment"))
+  ) %>%
+  ggplot() +
+  geom_histogram(aes(x = Scenario, y = M, fill = Type), stat = "identity") +
+  scale_y_continuous("ACF cost by type, in millions of 2019 USD", labels = scales::number_format(scale = 1e-6)) +
+  scale_x_discrete("Follow-up duration X tests per year") +
+  facet_wrap(.~Source, scales="free_y",) +
+  labs(caption = "*Slum population size of 3 million assumed")
+
+
+g_fudur_ppv <- stats %>% 
+  filter((n_fu == 2 & Duration ==4 ) | (n_fu == 4 & Duration == 2)) %>% 
+  filter(startsWith(Index, "PPV_"))  %>% 
+  mutate(
+    Type = ifelse(endsWith(Index, "Fu"), "Follow-up", "Initial ACF"),
+    Type = factor(Type, c("Initial ACF", "Follow-up")),
+    Scenario = ifelse(n_fu == 2, "4 years X 2", "2 years X 4")
+  ) %>% 
+  ggplot() +
+  geom_histogram(aes(x = Scenario, y = M), stat = "identity", alpha = 0.7) +
+  scale_y_continuous("PPV of case-yields", labels = scales::percent) +
+  scale_x_discrete("Follow-up duration X tests per year") +
+  facet_wrap(.~Type) +
+  expand_limits(y = c(0, 0.5)) +
+  labs(caption = "*Slum population size of 3 million assumed")
+
+
+g_fudur_cost + 
+  theme(legend.position = c(1, 0), legend.justification = c(1.05, -0.05))
 
 
 g_bind1 <- ggpubr::ggarrange(g_fudur, g_fudur_ce, nrow = 1)
@@ -164,9 +212,15 @@ g_bind1 <- ggpubr::ggarrange(g_fudur, g_fudur_ce, nrow = 1)
 g_bind2 <- ggpubr::ggarrange(g_fudur, g_fudur_cost, nrow = 1)
 
 
-ggsave(g_fudur, filename = here::here("docs", "g_fu_durinc.png"), width = 7, height = 5)
-ggsave(g_fudur_ce, filename = here::here("docs", "g_fu_durce.png"), width = 7, height = 5)
+ggsave(g_fudur, filename = here::here("docs", "g_fudur_inc.png"), width = 7, height = 5)
+ggsave(g_fudur_cost + 
+         theme(legend.position = c(1, 0), legend.justification = c(1.05, -0.05)), 
+       filename = here::here("docs", "g_fudur_cost.png"), width = 7, height = 5)
 
-ggsave(g_bind1, filename = here::here("docs", "g_fu_dur1.png"), width = 9, height = 5)
-ggsave(g_bind2, filename = here::here("docs", "g_fu_dur2.png"), width = 9, height = 5)
+ggsave(g_fudur_cpart, filename = here::here("docs", "g_fudur_cpart.png"), width = 9, height = 5)
+ggsave(g_fudur_ppv, filename = here::here("docs", "g_fudur_ppv.png"), width = 7, height = 5)
+
+
+ggsave(g_bind1, filename = here::here("docs", "g_fudur1.png"), width = 9, height = 5)
+ggsave(g_bind2, filename = here::here("docs", "g_fudur2.png"), width = 9, height = 5)
 

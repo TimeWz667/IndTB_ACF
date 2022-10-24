@@ -5,8 +5,8 @@ theme_set(theme_bw() + theme(text = element_text(family = "sans")))
 
 
 cost <- read_csv(here::here("data", "cost.csv"))
-cost <- as.list(setNames(cost$M, cost$Item))
-
+cost_d2d <- as.list(setNames(cost$D2D, cost$Item))
+cost_mdu <- as.list(setNames(cost$MDU, cost$Item))
 
 
 folder <- "dy_hi"
@@ -22,8 +22,8 @@ g_combine <- sims %>%
   group_by(Index) %>% 
   summarise(
     M = mean(value),
-    L = quantile(value, 0.025),
-    U = quantile(value, 0.975)
+    L = quantile(value, 0.25),
+    U = quantile(value, 0.75)
   ) %>% 
   ungroup() %>% 
   mutate(
@@ -38,6 +38,8 @@ g_combine <- sims %>%
   geom_histogram(aes(x = Index, y = M), stat = "identity") + 
   geom_linerange(aes(x = Index, ymin = L, ymax = U)) +
   scale_y_continuous("Averted incidence, %", labels= scales::percent)
+
+g_combine
 
 
 sims %>% 
@@ -86,11 +88,12 @@ g_trend
 
 stats <- sims %>% 
   mutate(
-    Cost = ACF_MDU_Screened * cost$CXR + ACF_D2D_Screened * cost$Sym, 
-    Cost = Cost + (ACF_MDU_Confirmed + ACF_D2D_Confirmed) * cost$Xpert,
-    Cost = Cost + (ACF_D2D_DS_Fl + ACF_D2D_DR_Fl) * cost$Tx_Fl,
-    Cost = Cost + (ACF_MDU_DS_Fl + ACF_MDU_DR_Fl) * cost$Tx_Fl,
-    Cost = Cost + (ACF_MDU_DR_Sl + ACF_D2D_DR_Sl) * cost$Tx_Sl
+    Cost = ACF_MDU_CXR * cost_mdu$CXR + ACF_D2D_CXR * cost_d2d$CXR, 
+    Cost = Cost + ACF_MDU_Sym * cost_mdu$Sym + ACF_D2D_Sym * cost_d2d$Sym, 
+    Cost = Cost + ACF_MDU_Xpert * cost_mdu$Xpert + ACF_D2D_Xpert * cost_d2d$Xpert, 
+    Cost = Cost + ACF_MDU_DS_Fl * cost_mdu$Tx_Fl + ACF_D2D_DS_Fl * cost_d2d$Tx_Fl, 
+    Cost = Cost + ACF_MDU_DR_Fl * cost_mdu$Tx_Fl + ACF_D2D_DR_Fl * cost_d2d$Tx_Fl, 
+    Cost = Cost + ACF_MDU_DR_Sl * cost_mdu$Tx_Sl + ACF_D2D_DR_Sl * cost_d2d$Tx_Sl
     # Cost = Cost + Yield_ACF_MU * C_Tx_Fl + Yield_ACF_D2D * C_Tx_Fl
   ) %>% 
   select(Time, Pop, IncR, MorR, Cost, Key, Scale) %>% 
@@ -110,8 +113,8 @@ g_ce <- stats %>%
   summarise(
     across(c(Cost, Avt), list(
       M = mean,
-      L = function(x) quantile(x, 0.05),
-      U = function(x) quantile(x, 0.95)
+      L = function(x) quantile(x, 0.25),
+      U = function(x) quantile(x, 0.75)
     ))
   ) %>% 
   ungroup() %>% 
@@ -127,9 +130,9 @@ g_ce <- stats %>%
   geom_linerange(aes(xmin = Cost_L, xmax = Cost_U, y = Avt_M)) +
   geom_segment(aes(x = 0, yend = Avt_M, y = 0, xend = Cost_M), linetype = "dashed") +
   geom_text(aes(y = Avt_M, x = Cost_M, label = Scale, hjust = - 0.2, vjust = 1.5)) +
-  scale_x_continuous("Total ACF cost, in millions of 2019 USD", labels = scales::number_format(scale = 1e-6)) +
+  scale_x_continuous("Total ACF cost, in millions of 2019 USD", labels = scales::number_format(scale = 1e-6, accuracy = 1)) +
   scale_y_continuous("Incident case averted, %, 2023-2030", labels = scales::percent) +
-  expand_limits(x = 0, y = 0)
+  expand_limits(x = c(0, 15e6), y = 0)
 
 
 g_ce

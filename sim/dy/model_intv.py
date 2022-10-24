@@ -90,6 +90,7 @@ class ModelIntv(Model):
 
         p['r_acf_mdu'] = yield_mdu / ((y0 * eligible * (1 - (1 - pos_sym) * (1 - pos_cxr)) * pos_xpert).sum() / y0.sum())
         p['r_acf_d2d'] = yield_d2d / ((y0 * eligible * pos_sym * pos_xpert).sum() / y0.sum())
+        p['acf_sym_spec'] = p['acf_sym_spec']
 
     @staticmethod
     def _update_triage(y0, p, spec_sym=None):
@@ -116,22 +117,23 @@ class ModelIntv(Model):
         pos_xpert[I.Infectious] = sens_xpert
 
         if spec_sym is None:
-            pos = (y0 * eligible * pos_cxr * pos_xpert)
-            ppv_mu = pos[I.Infectious].sum() / pos.sum()
-
-            def fn(spec, y):
-                pos_sym = np.zeros_like(y)
-                pos_sym[I.LTBI + I.Asym] = (1 - spec)
-                pos_sym[I.U] = (1 - spec)
-                pos_sym[I.Sym + I.ExSym] = 1
-
-                pos = y * eligible * pos_sym * pos_xpert
-                ppv_d2d = pos[I.Infectious].sum() / pos.sum()
-
-                return (ppv_d2d - ppv_mu) ** 2
-
-            opt = minimize_scalar(fn, 0.99, args=(y0, ), method='bounded', bounds=(0.5, 1))
-            spec_sym = opt.x
+            # pos = (y0 * eligible * pos_cxr * pos_xpert)
+            # ppv_mu = pos[I.Infectious].sum() / pos.sum()
+            #
+            # def fn(spec, y):
+            #     pos_sym = np.zeros_like(y)
+            #     pos_sym[I.LTBI + I.Asym] = (1 - spec)
+            #     pos_sym[I.U] = (1 - spec)
+            #     pos_sym[I.Sym + I.ExSym] = 1
+            #
+            #     pos = y * eligible * pos_sym * pos_xpert
+            #     ppv_d2d = pos[I.Infectious].sum() / pos.sum()
+            #
+            #     return (ppv_d2d - ppv_mu) ** 2
+            #
+            # opt = minimize_scalar(fn, 0.99, args=(y0, ), method='bounded', bounds=(0.5, 1))
+            # spec_sym = opt.x
+            p['acf_sym_spec'] = spec_sym = 1 - 0.036
 
         pos_sym = np.zeros((I.N_State_TB, 1))
         pos_sym[I.LTBI + I.Asym] = (1 - spec_sym)
@@ -179,10 +181,10 @@ if __name__ == '__main__':
     y1, p1 = m0.find_baseline(p0, 2022)
 
     _, ms0, _ = m0.simulate_onward(y1, p1, intv={'D2D': {'Scale': 0}, 'MDU': {'Scale': 0}})
-    _, ms1, _ = m0.simulate_onward(y1, p1, intv={'D2D': {'Scale': 1}, 'MDU': {'Scale': 1}})
-    _, ms2, _ = m0.simulate_onward(y1, p1, intv={'D2D': {'Scale': 2}, 'MDU': {'Scale': 2}})
-    # _, ms1, _ = m0.simulate_onward(y1, p1, intv={'VulACF': {'Coverage': 0.15, 'FollowUp': 0.8, 'Duration': 2}})
-    # _, ms2, _ = m0.simulate_onward(y1, p1, intv={'VulACF': {'Coverage': 0.15, 'FollowUp': 0.2, 'Duration': 2}})
+    # _, ms1, _ = m0.simulate_onward(y1, p1, intv={'D2D': {'Scale': 1}, 'MDU': {'Scale': 1}})
+    # _, ms2, _ = m0.simulate_onward(y1, p1, intv={'D2D': {'Scale': 2}, 'MDU': {'Scale': 2}})
+    _, ms1, _ = m0.simulate_onward(y1, p1, intv={'VulACF': {'Coverage': 0.15, 'FollowUp': 0.2, 'Duration': 2}})
+    _, ms2, _ = m0.simulate_onward(y1, p1, intv={'VulACF': {'Coverage': 0.15, 'FollowUp': 1, 'Duration': 2}})
     # _, ms2, _ = m0.simulate_onward(y1, p1, intv={'PlainACF': {'Coverage': 0.15}})
 
     print('MDU', ms1.ACF_MDU_Yield[2022.5] * 1e5, 430 / 3e6 * 1e5)
