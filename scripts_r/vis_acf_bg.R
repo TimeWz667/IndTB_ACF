@@ -37,6 +37,7 @@ g_combine <- sims %>%
   ggplot() + 
   geom_histogram(aes(x = Index, y = M), stat = "identity") + 
   geom_linerange(aes(x = Index, ymin = L, ymax = U)) +
+  scale_x_discrete("") +
   scale_y_continuous("Averted incidence, %", labels= scales::percent)
 
 g_combine
