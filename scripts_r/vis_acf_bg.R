@@ -57,6 +57,17 @@ sims %>%
 sims <- read_csv(here::here("out", folder, "Sim_BgACF_ScaleUp.csv"))[-1]
 
 
+sims %>% 
+  group_by(Key, Scale) %>% 
+  summarise(
+    PPV_MDU = sum(ACF_MDU_TP) / sum(ACF_MDU_Yield),
+    PPV_D2D = sum(ACF_D2D_TP) / sum(ACF_D2D_Yield)
+  ) %>% 
+  group_by(Scale) %>% 
+  summarise(across(starts_with("PPV"), mean))
+  
+
+
 g_trend <- sims %>% 
   select(Scale, Time, IncR, MorR) %>%  
   pivot_longer(-c(Scale, Time)) %>% 

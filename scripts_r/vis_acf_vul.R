@@ -24,6 +24,16 @@ stats0 <- stats %>%
   filter(Coverage == 0) %>% 
   select(Key, Type, Population, Inc0 = IncR, Mor0 = MorR)
 
+stats %>% 
+  group_by(Key, Type, Coverage, Population) %>% 
+  summarise(
+    PPV_Vul = sum(ACF_Vul_TP) / sum(ACF_Vul_Yield),
+    PPV_Plain = sum(ACF_Plain_TP) / sum(ACF_Plain_Yield)
+  ) %>% 
+  group_by(Type, Coverage, Population) %>% 
+  summarise(across(starts_with("PPV"), mean)) %>% 
+  data.frame()
+
 
 
 stats <- stats %>% 
@@ -117,10 +127,12 @@ g_vul_ci <- stats %>%
   geom_line(aes(x = C_Total, y = AvtInc, colour = Gp)) +
   scale_x_continuous("Total ACF cost, in millions of 2019 USD", 
                      breaks=seq(0, 40, 10) * 1e6, 
-                     limits = c(0, 40e6),
+                     # limits = c(0, 40e6),
                      labels = scales::number_format(scale = 1e-6)) + 
   # scale_y_continuous("Incident case averted, %, 2023-2030", labels = scales::percent) +
-  scale_y_continuous("Averted cases, %", labels = scales::percent, limits = c(0, 0.15)) + 
+  scale_y_continuous("Averted cases, %", labels = scales::percent
+                     # limits = c(0, 0.15)
+                     ) + 
   scale_color_discrete("Scenario", labels=c(cxr="Untargeted screening",
                                             Vul_hi="Vulnerability-led, low threshold",
                                             Vul_lo="Vulnerability-led, high threshold"
