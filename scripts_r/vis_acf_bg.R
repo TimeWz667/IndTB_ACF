@@ -132,9 +132,9 @@ g_ce <- stats %>%
   ungroup() %>% 
   mutate(
     Scale = case_when(
-      Scale == "1x" ~ "Channei ACF",
-      Scale == "2x" ~ "Channei ACF x2",
-      Scale == "4x" ~ "Channei ACF x4"
+      Scale == "1x" ~ "Chennai ACF",
+      Scale == "2x" ~ "Chennai ACF x2",
+      Scale == "4x" ~ "Chennai ACF x4"
     )
   ) %>% 
   ggplot() +
@@ -144,7 +144,7 @@ g_ce <- stats %>%
   geom_text(aes(y = Avt_M, x = Cost_M, label = Scale, hjust = - 0.2, vjust = 1.5)) +
   scale_x_continuous("Total ACF cost, in millions of 2019 USD", labels = scales::number_format(scale = 1e-6, accuracy = 1)) +
   scale_y_continuous("Incident case averted, %, 2023-2030", labels = scales::percent) +
-  expand_limits(x = c(0, 15e6), y = 0)
+  expand_limits(x = c(0, 30e6), y = 0)
 
 
 g_ce

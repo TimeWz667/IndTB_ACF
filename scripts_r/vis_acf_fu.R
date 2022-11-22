@@ -153,9 +153,10 @@ g_fudur_cost <- s1 %>%
   geom_text(data = txt, aes(y = AvtInc * 1.02, x = dC_Total * 0.99, label = n_fu)) +
   scale_x_continuous("Total ACF cost, in millions of 2019 USD", breaks=seq(8, 20, 2) * 1e6, labels = scales::number_format(scale = 1e-6, accuracy = 1)) + 
   # scale_y_continuous("Incident case averted, %, 2023-2030", labels = scales::percent) +
-  scale_y_continuous("", labels = scales::percent) +
-  scale_colour_discrete("Follow-up period, year", guide = guide_legend(reverse = T)) + 
-  expand_limits(y = 0, x = 7e6) +
+  scale_y_continuous("Incident case averted, %, 2023-2030", labels = scales::percent) +
+  scale_colour_discrete("Follow-up period", guide = guide_legend(reverse = T), 
+                        labels=function(x){paste0(x, ifelse(x=="1", " year", " years"))}) + 
+  expand_limits(y = 0.05, x = 7e6) +
   theme(legend.position = "None") +
   labs(caption = "*Coverage=20% of total population per year\n*Numbers annotate the number of follow-up screening per year")
 

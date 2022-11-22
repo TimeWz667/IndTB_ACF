@@ -138,11 +138,16 @@ class VulACF:
 
         n_target = r_acf0 * y.sum()
         r_acf = min(24, n_target / (eli * y).sum())
-
+# vul + asym -> cxr
         arrived = r_acf * y
-        screened0 = arrived * eli
-        screened = screened0 * (1 - (1 - pos_sym) * (1 - pos_vul))
-        confirmed = screened * pos_cxr
+        screened = arrived * eli
+
+        s_v = screened * pos_sym * pos_vul
+        a_v = screened * (1 - pos_sym) * pos_vul
+        s_n = screened * pos_sym * (1 - pos_vul)
+        xa_v = a_v * pos_cxr
+
+        confirmed = s_v + xa_v + s_n
         pos = confirmed * pos_xpert
         neg = screened - pos
         tp_ds, tp_dr = pos[I.Infectious_DS], pos[I.Infectious_DR]
@@ -151,7 +156,7 @@ class VulACF:
 
         if mea:
             m = _mea_acf(n, arrived, screened, confirmed, pos, tp_ds, tp_dr_fl, tp_dr_sl, 'Vul',
-                         n_vul=screened0.sum(), n_sym=screened0.sum(), n_cxr=screened.sum(), n_xpert=confirmed.sum())
+                         n_vul=screened.sum(), n_sym=screened.sum(), n_cxr=a_v.sum(), n_xpert=confirmed.sum())
         else:
             dy = np.zeros_like(y)
             dy[I.Infectious_DS] -= tp_ds
@@ -194,7 +199,7 @@ class VulACF:
 
         if mea:
             m.update(_mea_acf(n, arrived, screened, confirmed, pos, tp_ds, tp_dr_fl, tp_dr_sl, 'VulFu',
-                              n_sym=screened0.sum(), n_xpert=confirmed.sum()))
+                              n_sym=screened.sum(), n_xpert=confirmed.sum()))
         else:
             dy[I.Infectious_DS, 3] -= tp_ds
             dy[I.Infectious_DR, 3] -= tp_dr
@@ -210,7 +215,7 @@ class VulACF:
         else:
             return dy
 
-    def _calc_plain_acf(self, y, r_acf0, pars, mea=False):
+    def _calc_plain_acf(self, y, r_acf0, cxr, pars, mea=False):
         I = self.Keys
         pos_cxr, pos_xpert, p_dst = pars['pos_cxr'], pars['pos_xpert'], pars['acf_dst_sens']
         pos_sym, eli = pars['pos_sym'], pars['eli']
@@ -223,7 +228,11 @@ class VulACF:
         arrived = r_acf * y
         screened = arrived * eli
         # screened = screened0 * pos_sym
-        confirmed = screened * (1 - (1 - pos_cxr) * (1 - pos_sym))
+        if cxr:
+            confirmed = screened * (1 - (1 - pos_cxr) * (1 - pos_sym))
+        else:
+            confirmed = screened * pos_sym
+
         pos = confirmed * pos_xpert
         neg = screened - pos
         tp_ds, tp_dr = pos[I.Infectious_DS], pos[I.Infectious_DR]
@@ -233,7 +242,7 @@ class VulACF:
         if mea:
             m = _mea_acf(n, arrived, screened, confirmed, pos, tp_ds, tp_dr_fl, tp_dr_sl, 'Plain',
                          n_sym=screened.sum(),
-                         n_cxr=screened.sum(), n_xpert=confirmed.sum())
+                         n_cxr=screened.sum() if cxr else 0, n_xpert=confirmed.sum())
         else:
             dy = np.zeros_like(y)
             dy[I.Infectious_DS] -= tp_ds
@@ -259,9 +268,9 @@ class VulACF:
             dy += self._calc_vul_acf(y, r_acf_vul, r_fu_v, r_lost_v, pars, mea=False)
 
         # Plain ACF
-        r_acf_plain = intv.modify_acf_plain(t, 0)
+        r_acf_plain, has_cxr = intv.modify_acf_plain(t, 0, False)
         if r_acf_plain > 0:
-            dy += self._calc_plain_acf(y, r_acf_plain, pars, mea=False)
+            dy += self._calc_plain_acf(y, r_acf_plain, has_cxr, pars, mea=False)
         return dy
 
     def measure(self, t, y, pars, intv, mea):
@@ -269,5 +278,5 @@ class VulACF:
         mea.update(self._calc_vul_acf(y, r_acf_vul, r_fu, r_lost, pars, mea=True))
 
         # Plain ACF
-        r_acf_plain = intv.modify_acf_plain(t, 0)
-        mea.update(self._calc_plain_acf(y, r_acf_plain, pars, mea=True))
+        r_acf_plain, has_cxr = intv.modify_acf_plain(t, 0, False)
+        mea.update(self._calc_plain_acf(y, r_acf_plain, has_cxr, pars, mea=True))

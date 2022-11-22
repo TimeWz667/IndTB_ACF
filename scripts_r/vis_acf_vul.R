@@ -12,7 +12,7 @@ cost_plain <- as.list(setNames(cost$Plain, cost$Item))
 cost <- as.list(setNames(cost$Vul, cost$Item))
 
 
-ds <- c("dy_hi", "dy_lo")
+ds <- c("dy_hi") #, "dy_lo")
 
 stats <- bind_rows(lapply(ds, function(d) {
   read_csv(here::here("out", d, "Sim_VulACF_budget_stats.csv"))[-1] %>% 
@@ -38,6 +38,7 @@ stats %>%
 
 stats <- stats %>% 
   mutate(
+    across(starts_with("ACF_"), function(x) ifelse(is.na(x), 0, x)),
     N_Footfall = pmax(ACF_Plain_Footfall, ACF_Vul_Footfall),
     N_Screened = pmax(ACF_Plain_Screened, ACF_Vul_Screened),
     N_Confirmed = pmax(ACF_Plain_Confirmed, ACF_Vul_Confirmed),
@@ -66,7 +67,9 @@ stats <- stats %>%
     Gp = case_when(
       Type == "VulACF" & Population == "dy_lo" ~ "Vul_lo",
       Type == "VulACF" & Population == "dy_hi" ~ "Vul_hi",
-      Population == "dy_hi" ~ "cxr",
+      Type == "PlainACF" & Population == "dy_hi" ~ "ut_hi",
+      Type == "PlainACF_NoCXR" & Population == "dy_hi" ~ "utsym_hi",
+      Type == "PlainACF_NoCXR" & Population == "dy_lo" ~ "utsym_lo",
       T ~ "None"
     )
   ) %>% 
@@ -75,6 +78,7 @@ stats <- stats %>%
 
 
 g_avt1 <- stats %>% 
+  filter(Gp %in% c("ut_hi", "utsym_hi", "Vul_hi", "Vul_lo")) %>% 
   group_by(Gp, Coverage, Population, Type) %>% 
   summarise(
     M = mean(AvtInc),
@@ -88,16 +92,20 @@ g_avt1 <- stats %>%
   scale_y_continuous("Averted cases, %", labels = scales::percent) + 
   scale_x_continuous("Annual ACF screened, percentage population", 
                      labels = scales::percent) +
-  scale_color_discrete("Scenario", labels=c(cxr="Untargeted screening",
-                                            Vul_hi="Vulnerability-led, low threshold",
+  scale_color_discrete("Scenario", labels=c(ut_hi="Untargeted screening",
+                                            utsym_hi="Untrageted screening, sym only",
+                                            utsym_lo="Untrageted screening, sym only, high threshold",
+                                            Vul_hi="Vulnerability-led ACF",
                                             Vul_lo="Vulnerability-led, high threshold"
                                             )) +
   guides(fill = guide_none()) +
   theme(legend.position = "right")
 
 
+g_avt1
 
 g_vul_imp <- stats %>% 
+  filter(Gp %in% c("ut_hi", "utsym_hi", "Vul_hi", "Vul_lo")) %>% 
   group_by(Gp, Coverage, Population, Type) %>% 
   summarise(
     M = mean(AvtInc),
@@ -106,17 +114,22 @@ g_vul_imp <- stats %>%
   ) %>% 
   ungroup() %>% 
   ggplot() + 
+  # geom_point(aes(x = Coverage, y = M, colour = Gp)) +
   geom_line(aes(x = Coverage, y = M, colour = Gp)) +
   scale_y_continuous("Averted cases, %", labels = scales::percent) + 
   scale_x_continuous("Annual ACF screened, percentage population", 
                      labels = scales::percent) +
-  scale_color_discrete("Scenario", labels=c(cxr="Untargeted screening",
-                                            Vul_hi="Vulnerability-led, low threshold",
+  scale_color_discrete("Scenario", labels=c(ut_hi="Untargeted ACF, Sy or CXR > Testing",
+                                            utsym_hi="Untrageted ACF, Sy > Testing",
+                                            utsym_lo="Untrageted ACF, Sy > Testing",
+                                            Vul_hi="Vulnerability-led",
                                             Vul_lo="Vulnerability-led, high threshold"
   )) +
   guides(fill = guide_none()) +
   theme(legend.position = c(1, 0), legend.justification = c(1 + 0.05, -0.05))
 
+
+g_vul_imp
 
 
 g_vul_ci <- stats %>% 
@@ -125,16 +138,19 @@ g_vul_ci <- stats %>%
   ungroup() %>% 
   ggplot() + 
   geom_line(aes(x = C_Total, y = AvtInc, colour = Gp)) +
+  #geom_point(aes(x = C_Total, y = AvtInc, colour = Gp)) +
   scale_x_continuous("Total ACF cost, in millions of 2019 USD", 
-                     breaks=seq(0, 40, 10) * 1e6, 
+                     breaks=c(seq(0, 50, 10), seq(100, 1000, 100)) * 1e6, 
                      # limits = c(0, 40e6),
                      labels = scales::number_format(scale = 1e-6)) + 
   # scale_y_continuous("Incident case averted, %, 2023-2030", labels = scales::percent) +
   scale_y_continuous("Averted cases, %", labels = scales::percent
                      # limits = c(0, 0.15)
                      ) + 
-  scale_color_discrete("Scenario", labels=c(cxr="Untargeted screening",
-                                            Vul_hi="Vulnerability-led, low threshold",
+  scale_color_discrete("Scenario", labels=c(ut_hi="Untargeted ACF, Sy or CXR > Testing",
+                                            utsym_hi="Untrageted ACF, Sy > Testing",
+                                            utsym_lo="Untrageted ACF, Sy > Testing",
+                                            Vul_hi="Vulnerability-led",
                                             Vul_lo="Vulnerability-led, high threshold"
   )) +
   expand_limits(x = 0, y = 0) +
@@ -142,13 +158,42 @@ g_vul_ci <- stats %>%
 
 
 
+
+g_vul_ci_boot <- stats  %>% 
+  ggplot() + 
+  geom_line(aes(x = C_Total, y = AvtInc, colour = Gp, group = paste0(Key, Gp)), alpha = 0.1) +
+  #geom_point(aes(x = C_Total, y = AvtInc, colour = Gp)) +
+  scale_x_continuous("Total ACF cost, in millions of 2019 USD", 
+                     breaks=seq(0, 40, 10) * 1e6, 
+                     # limits = c(0, 40e6),
+                     labels = scales::number_format(scale = 1e-6)) + 
+  # scale_y_continuous("Incident case averted, %, 2023-2030", labels = scales::percent) +
+  scale_y_continuous("Averted cases, %", labels = scales::percent
+                     # limits = c(0, 0.15)
+  ) + 
+  scale_color_discrete("Scenario", labels=c(ut_hi="Untargeted screening",
+                                            utsym_hi="Untrageted screening, sym only, low threshold",
+                                            utsym_lo="Untrageted screening, sym only, high threshold",
+                                            Vul_hi="Vulnerability-led, low threshold",
+                                            Vul_lo="Vulnerability-led, high threshold"
+  )) +
+  expand_limits(x = 0, y = 0) +
+  theme(legend.position = c(1, 0), legend.justification = c(1 + 0.05, -0.05))
+
+
 g_avt1
 g_vul_imp
 g_vul_ci
+g_vul_ci_boot
+
+g_vul_bind <- ggpubr::ggarrange(g_vul_imp + theme(legend.position = "none"), g_vul_ci, nrow = 1)
 
 
-ggsave(g_avt, filename = here::here("docs", "g_avt.png"), width = 6, height = 5)
+ggsave(g_avt1, filename = here::here("docs", "g_avt.png"), width = 8, height = 5)
 ggsave(g_vul_imp, filename = here::here("docs", "g_vul_imp.png"), width = 6, height = 5)
 ggsave(g_vul_ci, filename = here::here("docs", "g_vul_ci.png"), width = 6, height = 5)
+ggsave(g_vul_ci_boot, filename = here::here("docs", "g_vul_ci2.png"), width = 6, height = 5)
+
+ggsave(g_vul_bind, filename = here::here("docs", "g_vul_bind.png"), width = 10, height = 5)
 # ggsave(g_yield, filename = here::here("docs", "g_yield.png"), width = 6, height = 3)
 

@@ -16,6 +16,7 @@ class D2D(BaseModel):
 
 class PlainACF(BaseModel):
     Coverage: confloat(ge=0) = 0
+    CXR = True
 
 
 class VulACF(BaseModel):
@@ -48,15 +49,17 @@ class Intervention(BaseModel):
                 r_fu = 1 / self.VulACF.FollowUp
         return cov, r_fu, r_lost
 
-    def modify_acf_plain(self, t, cov):
+    def modify_acf_plain(self, t, cov, cxr):
         if t >= self.T0_Vul:
             cov = self.PlainACF.Coverage
-        return cov
+            cxr = self.PlainACF.CXR
+        return cov, cxr
 
 
 if __name__ == '__main__':
     intv_list = {
         'VulACF': {'Coverage': 0.5},
+        'Plain': {'Coverage': 0.2}
     }
 
     intv = Intervention.parse_obj(intv_list)
