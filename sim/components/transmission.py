@@ -43,7 +43,7 @@ class Transmission(Process):
         ns = y.sum(0)
         n = ns.sum()
 
-        mea['ARTI'] = ((pars['trans_ds'] + pars['trans_dr']) * y).sum() / y.sum()
+        mea['ARTI'] = ((pars['trans_ds'] * pars['beta_ds'] + pars['trans_dr'] * pars['beta_dr']) * y).sum() / y.sum()
         mea['LTBI'] = ltbi.sum() / n
 
         for i, strata in enumerate(I.Tag_Strata):
