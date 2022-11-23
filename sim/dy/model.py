@@ -156,7 +156,7 @@ if __name__ == '__main__':
     m = Model(year0=1970)
 
     p0 = prior[2]
-    p0.update({'beta_ds': 5, 'rr_risk_comorb': 20, 'rr_beta_dr': 1.05, 'p_comorb': 0.3})
+    p0.update({'beta_ds': 30, 'rr_risk_comorb': 20, 'rr_beta_dr': 1.05, 'p_comorb': 0.3})
 
     _, ms, _ = m.simulate_to_fit(p0)
     print(ms)
