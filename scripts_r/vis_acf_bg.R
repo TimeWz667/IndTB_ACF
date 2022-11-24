@@ -9,7 +9,7 @@ cost_d2d <- as.list(setNames(cost$D2D, cost$Item))
 cost_mdu <- as.list(setNames(cost$MDU, cost$Item))
 
 
-folder <- "dy_hi"
+folder <- "main"
 sims <- read_csv(here::here("out", folder, "Sim_BgACF_IncrementalAverted.csv"))[-1]
 
 
@@ -189,11 +189,11 @@ tab_yield <- ss %>%
 
 
 
-ggsave(g_combine, filename = here::here("docs", "g_bg_acf_combine.png"), width = 6, height = 4.5)
+ggsave(g_combine, filename = here::here("docs", "figs", "g_bg_acf_combine.png"), width = 6, height = 4.5)
 
-ggsave(g_trend, filename = here::here("docs", "g_bg_acf_trend.png"), width = 8, height = 4.5)
+ggsave(g_trend, filename = here::here("docs", "figs", "g_bg_acf_trend.png"), width = 8, height = 4.5)
 
-ggsave(g_ce, filename = here::here("docs", "g_bg_acf_ce.png"), width = 6, height = 4.5)
+ggsave(g_ce, filename = here::here("docs", "figs", "g_bg_acf_ce.png"), width = 6, height = 4.5)
 
-write_csv(tab_yield, here::here("docs", "tab_yield_bg_acf.csv"))
+write_csv(tab_yield, here::here("docs", "tabs", "tab_yield_bg_acf.csv"))
 

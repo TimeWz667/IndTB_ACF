@@ -9,7 +9,7 @@ targets <- bind_rows(targets)
 
 
 
-folders <- c("dy_lo", "dy_hi")
+folders <- c("dy_lo", "dy_hi", "main")
 
 
 for(folder in folders) {

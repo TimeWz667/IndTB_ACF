@@ -1,0 +1,58 @@
+﻿RF,Total
+Dust,2648
+Diabetes,1165
+Tobacco,470
+HCW,194
+Alcohol,1
+Chronic lung disease,36
+Past TB,35
+HH Contact,25
+CLD/CKD,22
+Cancer,17
+HH Contacts + Diabetes,9
+Diabetes + Chronic lung disease,9
+Past TB + Diabetes,7
+Chronic lung diseases + Alcohol,6
+HH Contacts + Past TB,4
+HH Contacts + Dust,4
+Past TB + Tobacco,4
+Past TB + Dust,4
+Diabetes + Cancer,4
+Chronic lung diseases + Tobacco,4
+Diabetes + CLD/CKD,3
+Past TB + Alcohol,2
+Chronic lung diseases + Dust,2
+CLD/CKD + Dust,2
+HH Contacts + Tobacco,1
+HH Contacts + Alcohol,1
+Chronic lung diseases + CLD/CKD,1
+Chronic lung diseases + Cancer,1
+CLD/CKD + Cancer,1
+CLD/CKD + Tobacco,1
+Cancer + Tobacco,1
+Cancer + Dust,1
+HH Contacts + Tobacco + Alcohol,2
+Past TB + Alcohol + Dust,2
+Chronic lung disease + Tobacco + Alcohol,2
+HH Contacts + Past TB + Alcohol,1
+HH Contacts + Past TB + Dust,1
+HH Contacts + Past TB + Chronic lung disease,1
+HH Contacts + Alcohol + Dust,1
+Past TB + Diabetes + Dust,1
+Past TB + Diabetes + Tobacco,1
+Diabetes + Chronic lung disease + CLD/CKD,1
+Diabetes + Chronic lung disease + Dust,1
+Diabetes + CLD/CKD + HCW,1
+Diabetes + Cancer + Tobacco,1
+Chronic lung disease + Tobacco + Dust,1
+Cancer + Tobacco + Alcohol,1
+Diabetes + Chronic lung disease + CLD/CKD + Cancer,3
+HH Contacts + Tobacco + Alcohol + Dust,2
+Past TB + Diabetes + Tobacco + Alcohol,2
+HH Contacts + Past TB + Chronic lung disease + Dust,1
+Past TB + Tobacco + Alcohol + Dust,1
+CLD/CKD + Cancer + Tobacco + Alcohol,1
+Past TB + Diabetes + Tobacco + Alcohol + Dust,2
+Diabetes + Chronic lung diease + Cancer + Alcohol + Dust,1
+Diabetes + Chronic lung disease + CLD/CKD + Cancer + Alcohol + Dust,1
+Diabetes + Chronic lung disease + CLD/CKD + Cancer + Tobacco + Alcohol + Dust,1
