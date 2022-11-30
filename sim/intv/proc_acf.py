@@ -1,282 +1,233 @@
 import numpy as np
+from sim.components.base import Process
+from collections import defaultdict
+
+__all__ = ['ProcACF', 'ProcAltACF']
 
 
-__all__ = ['BgACF', 'VulACF']
+def _mea_acf(n, calc, prefix=''):
+    arrived = calc[f'{prefix}arrived'].sum()
+    eligible = calc[f'{prefix}eligible'].sum()
+    pos = calc[f'{prefix}pos'].sum()
 
+    fl = calc[f'{prefix}tp_ds'].sum() + calc[f'{prefix}tp_dr_fl'].sum()
+    sl = calc['fu_tp_dr_sl'].sum()
 
-def _mea_acf(n, arrived, screened, confirmed, pos, tp_ds, tp_dr_fl, tp_dr_sl, label, n_sym=0, n_vul=0, n_cxr=0, n_xpert=0):
     return {
-        f'ACF_{label}_Footfall': arrived.sum() / n,
-        f'ACF_{label}_Screened': screened.sum() / n,
-        f'ACF_{label}_Confirmed': confirmed.sum() / n,
-        f'ACF_{label}_Sym': n_sym / n,
-        f'ACF_{label}_Vul': n_vul / n,
-        f'ACF_{label}_CXR': n_cxr / n,
-        f'ACF_{label}_Xpert': n_xpert / n,
-        f'ACF_{label}_Yield': pos.sum() / n,
-        f'ACF_{label}_TP': (tp_ds + tp_dr_fl + tp_dr_sl).sum() / n,
-        f'ACF_{label}_DS_Fl': tp_ds.sum() / n,
-        f'ACF_{label}_DR_Fl': tp_dr_fl.sum() / n,
-        f'ACF_{label}_DR_Sl': tp_dr_sl.sum() / n,
+        f'ACF_{prefix}Footfall': arrived / n,
+        f'ACF_{prefix}Screened': eligible / n,
+        f'ACF_{prefix}Yield': pos / n,
+        f'ACF_{prefix}TP': (fl + sl) / n,
+        f'ACF_{prefix}Fl': fl / n,
+        f'ACF_{prefix}Sl': sl / n,
+        f'ACF_{prefix}TPT': (pos - fl - sl) / n
     }
 
 
-class BgACF:
-    def __init__(self, keys):
-        self.Keys = keys
-
-    def _calc_bg_acf(self, y, r_acf, eli, pos_screen, pos_confirm, p_dst, mea=False, label='bg'):
+class ProcACF(Process):
+    def _calc(self, t, y, pars):
         I = self.Keys
-        arrived = r_acf * y
-        screened = arrived * eli
-        confirmed = screened * pos_screen
-        pos = confirmed * pos_confirm
-        tp_ds, tp_dr = pos[I.Infectious_DS], pos[I.Infectious_DR]
-        tp_dr_fl = tp_dr * (1 - p_dst)
-        tp_dr_sl = tp_dr - tp_dr_fl
 
-        if mea:
-            n = y.sum()
-            return _mea_acf(n, arrived, screened, confirmed, pos, tp_ds, tp_dr_fl, tp_dr_sl, label)
-        else:
-            dy = np.zeros_like(y)
-            dy[I.Infectious_DS, :2] -= tp_ds
-            dy[I.Infectious_DR, :2] -= tp_dr
-            dy[I.Txf_Pub_DS, :2] += tp_ds.sum(0)
-            dy[I.Txf_Pub_DR, :2] += tp_dr_fl.sum(0)
-            dy[I.Txs_Pub_DR, :2] += tp_dr_sl.sum(0)
-            return dy
+        pars, intv = pars
+        n = y.sum()
+        eli = pars['eli']
+        p_eli = (eli * y).sum() / n
 
-    def _calc_mdu(self, y, r_acf, p_dst, pars, mea=False):
-        pos_sym, pos_cxr, pos_xpert, eli = pars['pos_sym'], pars['pos_cxr'], pars['pos_xpert'], pars['eli']
+        calc = defaultdict(lambda: np.zeros((y.shape[0], 1)))
 
+        r_acf, r_loss, r_fu, alg = intv.find_rates_main(t, p_eli)
+        calc['r_acf'], calc['r_loss'] = r_acf, r_loss
+
+        if r_acf > 0:
+            alg = intv.FullACF.ScreenAlg
+            alg = pars[f'alg:{alg}']
+            p_dst = pars['acf_dst_sens']
+
+            calc['arrived'] = arrived = r_acf * y
+            calc['eligible'] = eligible = arrived * eli
+            calc['pos'] = pos = eligible * alg['pos']
+            calc['neg'] = eligible * (1 - alg['pos'])
+            calc['lost'] = r_loss * y[:, 2:]
+
+            tp_ds, tp_dr = pos[I.Infectious_DS], pos[I.Infectious_DR]
+            calc['tp_ds'] = tp_ds
+            calc['tp_dr'] = tp_dr
+            calc['tp_dr_fl'] = tp_dr * (1 - p_dst)
+            calc['tp_dr_sl'] = tp_dr * p_dst
+
+            for item in ['sym', 'vul', 'vs', 'cxr', 'xpert']:
+                calc[f'use_{item}'] = (alg[f'use_{item}'] * eligible).sum()
+
+            # Follow-up period
+            if r_loss > 0:
+                alg = pars['alg:Sy']
+
+                calc['fu_arrived'] = arrived = np.array([0, 0, r_fu, r_fu]).reshape((1, 4)) * y
+                calc['fu_eligible'] = eligible = arrived * eli
+                calc['fu_pos'] = eligible * alg['pos']
+                calc['fu_neg'] = eligible * (1 - alg['pos'])
+
+                tp_ds, tp_dr = pos[I.Infectious_DS], pos[I.Infectious_DR]
+                calc['fu_tp_ds'] = tp_ds
+                calc['fu_tp_dr'] = tp_dr
+                calc['fu_tp_dr_fl'] = tp_dr * (1 - p_dst)
+                calc['fu_tp_dr_sl'] = tp_dr * p_dst
+
+                for item in ['sym', 'vul', 'vs', 'cxr', 'xpert']:
+                    calc[f'use_{item}'] += (alg[f'use_{item}'] * eligible).sum()
+        return calc
+
+    def calc_dy(self, t, y, pars):
         I = self.Keys
-        arrived = r_acf * y
-        screened = arrived * eli
-        confirmed = screened * (1 - (1 - pos_cxr) * (1 - pos_sym))
-        pos = confirmed * pos_xpert
-        tp_ds, tp_dr = pos[I.Infectious_DS], pos[I.Infectious_DR]
-        tp_dr_fl = tp_dr * (1 - p_dst)
-        tp_dr_sl = tp_dr - tp_dr_fl
 
-        if mea:
-            n = y.sum()
-            return _mea_acf(n, arrived, screened, confirmed, pos, tp_ds, tp_dr_fl, tp_dr_sl, 'MDU',
-                            n_sym=screened.sum(), n_cxr=screened.sum(), n_xpert=confirmed.sum())
-        else:
-            dy = np.zeros_like(y)
-            dy[I.Infectious_DS, :2] -= tp_ds
-            dy[I.Infectious_DR, :2] -= tp_dr
-            dy[I.Txf_Pub_DS, :2] += tp_ds.sum(0)
-            dy[I.Txf_Pub_DR, :2] += tp_dr_fl.sum(0)
-            dy[I.Txs_Pub_DR, :2] += tp_dr_sl.sum(0)
-            return dy
+        calc = self._calc(t, y, pars)
 
-    def _calc_d2d(self, y, r_acf, p_dst, pars, mea=False):
-        pos_sym, pos_xpert, eli = pars['pos_sym'], pars['pos_xpert'], pars['eli']
-
-        I = self.Keys
-        arrived = r_acf * y
-        screened = arrived * eli
-        confirmed = screened * pos_sym
-        pos = confirmed * pos_xpert
-        tp_ds, tp_dr = pos[I.Infectious_DS], pos[I.Infectious_DR]
-        tp_dr_fl = tp_dr * (1 - p_dst)
-        tp_dr_sl = tp_dr - tp_dr_fl
-
-        if mea:
-            n = y.sum()
-            return _mea_acf(n, arrived, screened, confirmed, pos, tp_ds, tp_dr_fl, tp_dr_sl, 'D2D',
-                            n_sym=screened.sum(), n_xpert=confirmed.sum())
-        else:
-            dy = np.zeros_like(y)
-            dy[I.Infectious_DS, :2] -= tp_ds
-            dy[I.Infectious_DR, :2] -= tp_dr
-            dy[I.Txf_Pub_DS, :2] += tp_ds.sum(0)
-            dy[I.Txf_Pub_DR, :2] += tp_dr_fl.sum(0)
-            dy[I.Txs_Pub_DR, :2] += tp_dr_sl.sum(0)
-            return dy
-
-    def calc_dy(self, t, y, pars, intv):
-        r_acf_mdu, r_acf_d2d, p_dst = pars['r_acf_mdu'], pars['r_acf_d2d'], pars['acf_dst_sens']
-        r_acf_mdu, r_acf_d2d, p_dst = intv.modify_acf_bg(t, r_acf_mdu, r_acf_d2d, p_dst)
+        tp_ds, tp_dr = calc['tp_ds'], calc['tp_dr']
+        tp_dr_fl, tp_dr_sl = calc['tp_dr_fl'], calc['tp_dr_sl']
 
         dy = np.zeros_like(y)
-        # MDU
-        if r_acf_mdu > 0:
-            dy[:, :2] += self._calc_mdu(y[:, :2], r_acf_mdu, p_dst, pars, mea=False)
-        # D2D
-        if r_acf_d2d > 0:
-            dy[:, :2] += self._calc_d2d(y[:, :2], r_acf_d2d, p_dst, pars, mea=False)
+
+        if calc['r_acf'] <= 0:
+            return dy
+
+        dy[I.Infectious_DS] -= tp_ds
+        dy[I.Infectious_DR] -= tp_dr
+        dy[I.Txf_Pub_DS] += tp_ds.sum(0)
+        dy[I.Txf_Pub_DR] += tp_dr_fl.sum(0)
+        dy[I.Txs_Pub_DR] += tp_dr_sl.sum(0)
+
+        pos = calc['pos']
+        fp = pos[I.LTBI0]
+        dy[I.LTBI0] -= fp
+        dy[I.LTBI_TPT] += fp
+        fp = pos[I.U]
+        dy[I.U] -= fp
+        dy[I.UTPT] += fp
+
+        complete = y[I.LTBI_TPT] * 2
+        dy[I.LTBI_TPT] -= complete
+        dy[I.LTBI0, :2] += complete[:, :2] + complete[:, 2:]
+
+        complete = y[I.UTPT] * 2
+        dy[I.UTPT] -= complete
+        dy[I.U, :2] += complete[:2] + complete[2:]
+
+        # to follow up list
+        if calc['r_loss'] <= 0:
+            return dy
+
+        tp_ds, tp_dr = calc['fu_tp_ds'], calc['fu_tp_dr']
+        tp_dr_fl, tp_dr_sl = calc['fu_tp_dr_fl'], calc['fu_tp_dr_sl']
+
+        dy[I.Infectious_DS] -= tp_ds
+        dy[I.Infectious_DR] -= tp_dr
+        dy[I.Txf_Pub_DS] += tp_ds.sum(0)
+        dy[I.Txf_Pub_DR] += tp_dr_fl.sum(0)
+        dy[I.Txs_Pub_DR] += tp_dr_sl.sum(0)
+
+        pos = calc['fu_pos']
+        fp = pos[I.LTBI0]
+        dy[I.LTBI0] -= fp
+        dy[I.LTBI_TPT] += fp
+        fp = pos[I.U]
+        dy[I.U] -= fp
+        dy[I.UTPT] += fp
+
+        neg, lost = calc['neg'], calc['lost']
+        dy[:, 1] -= neg[:, 1]
+        dy[:, 3] += neg[:, 1]
+
+        dy[:, 2:] -= lost
+        dy[:, :2] += lost
         return dy
 
-    def measure(self, t, y, pars, intv, mea):
-        r_acf_mdu, r_acf_d2d, p_dst = pars['r_acf_mdu'], pars['r_acf_d2d'], pars['acf_dst_sens']
-        r_acf_mdu, r_acf_d2d, p_dst = intv.modify_acf_bg(t, r_acf_mdu, r_acf_d2d, p_dst)
-
-        # MDU
-        mea.update(self._calc_mdu(y[:, :2], r_acf_mdu, p_dst, pars, mea=True))
-
-        # D2D
-        mea.update(self._calc_d2d(y[:, :2], r_acf_d2d, p_dst, pars, mea=True))
-
-        l, lt = y[self.Keys.LTBI0].sum(), y[self.Keys.LTBI_TPT].sum()
-        mea['PrOnPseudoTPT'] = lt / (l + lt)
-
-
-class VulACF:
-    def __init__(self, keys):
-        self.Keys = keys
-        self.Recap = True
-
-    def _calc_vul_acf(self, y, r_acf0, r_fu, r_lost, pars, mea=False):
-        I = self.Keys
-        pos_cxr, pos_xpert, p_dst = pars['pos_cxr'], pars['pos_xpert'], pars['acf_dst_sens']
-        pos_vul, pos_sym, eli = pars['pos_vul'], pars['pos_sym'], pars['eli']
-
+    def measure(self, t, y, pars, mea):
         n = y.sum()
+        calc = self._calc(t, y, pars)
+        mea.update(_mea_acf(n, calc))
+        mea.update(_mea_acf(n, calc, prefix='fu_'))
 
-        n_target = r_acf0 * y.sum()
-        r_acf = min(24, n_target / (eli * y).sum())
-# vul + asym -> cxr
-        arrived = r_acf * y
-        screened = arrived * eli
+        for item in ['sym', 'vul', 'vs', 'cxr', 'xpert']:
+            mea[f'ACF_N_{item}'] = calc[f'use_{item}'].sum()
 
-        s_v = screened * pos_sym * pos_vul
-        a_v = screened * (1 - pos_sym) * pos_vul
-        s_n = screened * pos_sym * (1 - pos_vul)
-        xa_v = a_v * pos_cxr
+        n_tpt = y[self.Keys.UTPT].sum() + y[self.Keys.LTBI_TPT].sum()
+        mea['PrOnTPT'] = n_tpt / n
 
-        confirmed = s_v + xa_v + s_n
-        pos = confirmed * pos_xpert
-        neg = screened - pos
-        tp_ds, tp_dr = pos[I.Infectious_DS], pos[I.Infectious_DR]
-        tp_dr_fl = tp_dr * (1 - p_dst)
-        tp_dr_sl = tp_dr - tp_dr_fl
 
-        if mea:
-            m = _mea_acf(n, arrived, screened, confirmed, pos, tp_ds, tp_dr_fl, tp_dr_sl, 'Vul',
-                         n_vul=screened.sum(), n_sym=screened.sum(), n_cxr=a_v.sum(), n_xpert=confirmed.sum())
-        else:
-            dy = np.zeros_like(y)
-            dy[I.Infectious_DS] -= tp_ds
-            dy[I.Infectious_DR] -= tp_dr
-            dy[I.Txf_Pub_DS] += tp_ds.sum(0)
-            dy[I.Txf_Pub_DR] += tp_dr_fl.sum(0)
-            dy[I.Txs_Pub_DR] += tp_dr_sl.sum(0)
-
-            # to follow up list
-            if r_lost > 0:
-                dy[:, 1] -= neg[:, 1]
-                dy[:, 3] += neg[:, 1]
-
-                lost = r_lost * y[:, 2:]
-                dy[:, 2:] -= lost
-                dy[:, :2] += lost
-
-            complete = y[I.LTBI_TPT] * 2
-            dy[I.LTBI_TPT] -= complete
-            dy[I.LTBI0, :2] += complete[:, :2] + complete[:, 2:]
-
-            fp = pos[I.LTBI0]
-            dy[I.LTBI0] -= fp
-            dy[I.LTBI_TPT] += fp
-
-        if r_lost <= 0:
-            if mea:
-                return m
-            else:
-                return dy
-
-        # Follow-up
-        arrived = r_fu * y[:, 3]
-        screened = arrived
-        confirmed = screened * pos_sym.reshape(-1)
-        pos = confirmed * pos_xpert.reshape(-1)
-        tp_ds, tp_dr = pos[I.Infectious_DS], pos[I.Infectious_DR]
-        tp_dr_fl = tp_dr * (1 - p_dst)
-        tp_dr_sl = tp_dr - tp_dr_fl
-
-        if mea:
-            m.update(_mea_acf(n, arrived, screened, confirmed, pos, tp_ds, tp_dr_fl, tp_dr_sl, 'VulFu',
-                              n_sym=screened.sum(), n_xpert=confirmed.sum()))
-        else:
-            dy[I.Infectious_DS, 3] -= tp_ds
-            dy[I.Infectious_DR, 3] -= tp_dr
-            dy[I.Txf_Pub_DS, 3] += tp_ds.sum()
-            dy[I.Txf_Pub_DR, 3] += tp_dr_fl.sum()
-            dy[I.Txs_Pub_DR, 3] += tp_dr_sl.sum()
-
-            fp = pos[I.LTBI0]
-            dy[I.LTBI0, 3] -= fp
-            dy[I.LTBI_TPT, 3] += fp
-        if mea:
-            return m
-        else:
-            return dy
-
-    def _calc_plain_acf(self, y, r_acf0, cxr, pars, mea=False):
+class ProcAltACF(Process):
+    def _calc(self, t, y, pars):
         I = self.Keys
-        pos_cxr, pos_xpert, p_dst = pars['pos_cxr'], pars['pos_xpert'], pars['acf_dst_sens']
-        pos_sym, eli = pars['pos_sym'], pars['eli']
 
+        pars, intv = pars
         n = y.sum()
+        eli = pars['eli']
+        p_eli = (eli * y).sum() / n
 
-        n_target = r_acf0 * y.sum()
-        r_acf = min(24, n_target / (eli * y).sum())
+        calc = defaultdict(lambda: np.zeros((y.shape[0], 1)))
 
-        arrived = r_acf * y
-        screened = arrived * eli
-        # screened = screened0 * pos_sym
-        if cxr:
-            confirmed = screened * (1 - (1 - pos_cxr) * (1 - pos_sym))
-        else:
-            confirmed = screened * pos_sym
+        r_acf, alg = intv.find_rates_alt(t, p_eli)
+        calc['r_acf'] = r_acf
 
-        pos = confirmed * pos_xpert
-        neg = screened - pos
-        tp_ds, tp_dr = pos[I.Infectious_DS], pos[I.Infectious_DR]
-        tp_dr_fl = tp_dr * (1 - p_dst)
-        tp_dr_sl = tp_dr - tp_dr_fl
+        if r_acf > 0:
+            alg = intv.AltACF.ScreenAlg
+            alg = pars[f'alg:{alg}']
+            p_dst = pars['acf_dst_sens']
 
-        if mea:
-            m = _mea_acf(n, arrived, screened, confirmed, pos, tp_ds, tp_dr_fl, tp_dr_sl, 'Plain',
-                         n_sym=screened.sum(),
-                         n_cxr=screened.sum() if cxr else 0, n_xpert=confirmed.sum())
-        else:
-            dy = np.zeros_like(y)
-            dy[I.Infectious_DS] -= tp_ds
-            dy[I.Infectious_DR] -= tp_dr
-            dy[I.Txf_Pub_DS] += tp_ds.sum(0)
-            dy[I.Txf_Pub_DR] += tp_dr_fl.sum(0)
-            dy[I.Txs_Pub_DR] += tp_dr_sl.sum(0)
+            calc['arrived'] = arrived = r_acf * y
+            calc['eligible'] = eligible = arrived * eli
+            calc['pos'] = pos = eligible * alg['pos']
 
-            fp = pos[I.LTBI0]
-            dy[I.LTBI0] -= fp
-            dy[I.LTBI_TPT] += fp
+            tp_ds, tp_dr = pos[I.Infectious_DS], pos[I.Infectious_DR]
+            calc['tp_ds'] = tp_ds
+            calc['tp_dr'] = tp_dr
+            calc['tp_dr_fl'] = tp_dr * (1 - p_dst)
+            calc['tp_dr_sl'] = tp_dr * p_dst
 
-        if mea:
-            return m
-        else:
-            return dy
+            for item in ['sym', 'vul', 'vs', 'cxr', 'xpert']:
+                calc[f'use_{item}'] = (alg[f'use_{item}'] * eligible).sum()
 
-    def calc_dy(self, t, y, pars, intv):
+        return calc
+
+    def calc_dy(self, t, y, pars):
+        I = self.Keys
+
+        calc = self._calc(t, y, pars)
+        tp_ds, tp_dr = calc['tp_ds'], calc['tp_dr']
+        tp_dr_fl, tp_dr_sl = calc['tp_dr_fl'], calc['tp_dr_sl']
+
         dy = np.zeros_like(y)
-        # Vulnerability-led ACF
-        r_acf_vul, r_fu_v, r_lost_v = intv.modify_acf_vul(t, 0, 0, 0)
-        if r_acf_vul > 0:
-            dy += self._calc_vul_acf(y, r_acf_vul, r_fu_v, r_lost_v, pars, mea=False)
 
-        # Plain ACF
-        r_acf_plain, has_cxr = intv.modify_acf_plain(t, 0, False)
-        if r_acf_plain > 0:
-            dy += self._calc_plain_acf(y, r_acf_plain, has_cxr, pars, mea=False)
+        if calc['r_acf'] <= 0:
+            return dy
+
+        dy[I.Infectious_DS] -= tp_ds
+        dy[I.Infectious_DR] -= tp_dr
+        dy[I.Txf_Pub_DS] += tp_ds.sum(0)
+        dy[I.Txf_Pub_DR] += tp_dr_fl.sum(0)
+        dy[I.Txs_Pub_DR] += tp_dr_sl.sum(0)
+
+        pos = calc['pos']
+        fp = pos[I.LTBI0]
+        dy[I.LTBI0] -= fp
+        dy[I.LTBI_TPT] += fp
+        fp = pos[I.U]
+        dy[I.U] -= fp
+        dy[I.UTPT] += fp
+
+        complete = y[I.LTBI_TPT] * 2
+        dy[I.LTBI_TPT] -= complete
+        dy[I.LTBI0, :2] += complete[:, :2] + complete[:, 2:]
+
+        complete = y[I.UTPT] * 2
+        dy[I.UTPT] -= complete
+        dy[I.U, :2] += complete[:2] + complete[2:]
+
         return dy
 
-    def measure(self, t, y, pars, intv, mea):
-        r_acf_vul, r_fu, r_lost = intv.modify_acf_vul(t, 0, 0, 0)
-        mea.update(self._calc_vul_acf(y, r_acf_vul, r_fu, r_lost, pars, mea=True))
+    def measure(self, t, y, pars, mea):
+        n = y.sum()
+        calc = self._calc(t, y, pars)
+        mea.update(_mea_acf(n, calc, 'Alt'))
 
-        # Plain ACF
-        r_acf_plain, has_cxr = intv.modify_acf_plain(t, 0, False)
-        mea.update(self._calc_plain_acf(y, r_acf_plain, has_cxr, pars, mea=True))
+        for item in ['sym', 'vul', 'vs', 'cxr', 'xpert']:
+            mea[f'AltACF_N_{item}'] = calc[f'use_{item}'].sum()

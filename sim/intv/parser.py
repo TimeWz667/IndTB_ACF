@@ -6,60 +6,55 @@ __author__ = 'Chu-Chang Ku'
 __all__ = ['Intervention']
 
 
-class MDU(BaseModel):
-    Scale: confloat(ge=0) = 0
-
-
-class D2D(BaseModel):
-    Scale: confloat(ge=0) = 0
-
-
-class PlainACF(BaseModel):
+class FullACF(BaseModel):
     Coverage: confloat(ge=0) = 0
-    CXR = True
+    ScreenAlg: str = 'VSC'  # Screening algorithm
+    FollowUp: confloat(ge=0) = 0  # Number of follow-up per year
+    Duration: confloat(ge=0) = 0  # Follow-up period
+    Year0: confloat(ge=2022) = 2023
 
 
-class VulACF(BaseModel):
+class AltACF(BaseModel):
     Coverage: confloat(ge=0) = 0
-    FollowUp: confloat(ge=0) = 0
-    Duration: confloat(ge=0) = 0
+    ScreenAlg: str = 'Sy'  # Screening algorithm
+    Year0: confloat(ge=2022) = 2023
 
 
 class Intervention(BaseModel):
-    MDU = MDU()
-    D2D = D2D()
-    VulACF = VulACF()
-    PlainACF = PlainACF()
-    T0_Bg = 2022
-    T0_Vul = 2023
+    FullACF = FullACF()
+    AltACF = AltACF()
 
-    def modify_acf_bg(self, t, r_acf_mu, r_acf_d2d, p_dst):
-        if t >= self.T0_Bg:
-            r_acf_mu *= self.MDU.Scale
-            r_acf_d2d *= self.D2D.Scale
-        return r_acf_mu, r_acf_d2d, p_dst
+    def find_rates_main(self, t, p_eli):
+        alg = self.FullACF.ScreenAlg
 
-    def modify_acf_vul(self, t, cov, r_fu, r_lost):
-        if t >= self.T0_Vul:
-            cov = self.VulACF.Coverage
-            if self.VulACF.Duration > 0:
-                r_lost = 1 / self.VulACF.Duration
+        if t >= self.FullACF.Year0:
+            r_acf = self.FullACF.Coverage  # / p_eli
+            r_acf = min(r_acf, 26)
+            if self.FullACF.Duration <= 0:
+                r_loss, r_fu = 0, 0
+            else:
+                r_loss = 1 / self.FullACF.Duration
+                if self.FullACF.FollowUp <= 0:
+                    r_fu = 0
+                else:
+                    r_fu = self.FullACF.FollowUp
+            return r_acf, r_loss, r_fu, alg
+        return 0, 0, 0, alg
 
-            if self.VulACF.FollowUp > 0:
-                r_fu = 1 / self.VulACF.FollowUp
-        return cov, r_fu, r_lost
+    def find_rates_alt(self, t, p_eli):
+        alg = self.AltACF.ScreenAlg
 
-    def modify_acf_plain(self, t, cov, cxr):
-        if t >= self.T0_Vul:
-            cov = self.PlainACF.Coverage
-            cxr = self.PlainACF.CXR
-        return cov, cxr
+        if t >= self.AltACF.Year0:
+            r_acf = self.AltACF.Coverage  # / p_eli
+            r_acf = min(r_acf, 26)
+            return r_acf, alg
+        return 0, alg
 
 
 if __name__ == '__main__':
     intv_list = {
-        'VulACF': {'Coverage': 0.5},
-        'Plain': {'Coverage': 0.2}
+        'FullACF': {'Coverage': 0.5},
+        'AltACF': {'Coverage': 0.2}
     }
 
     intv = Intervention.parse_obj(intv_list)

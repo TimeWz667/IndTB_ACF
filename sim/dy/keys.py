@@ -35,19 +35,21 @@ RHigh_DR = 22
 RSt_DS = 23
 RSt_DR = 24
 
-FLatTPT_DS = 25
-FLatTPT_DR = 26
-SLatTPT_DS = 27
-SLatTPT_DR = 28
-RLowTPT_DS = 29
-RLowTPT_DR = 30
-RHighTPT_DS = 31
-RHighTPT_DR = 32
-RStTPT_DS = 33
-RStTPT_DR = 34
+UTPT = 25
+
+FLatTPT_DS = 26
+FLatTPT_DR = 27
+SLatTPT_DS = 28
+SLatTPT_DR = 29
+RLowTPT_DS = 30
+RLowTPT_DR = 31
+RHighTPT_DS = 32
+RHighTPT_DR = 33
+RStTPT_DS = 34
+RStTPT_DR = 35
 
 
-N_State_TB = 35
+N_State_TB = 36
 
 
 # Meta group
@@ -97,9 +99,11 @@ LTBI = LTBI0 + LTBI_TPT
 LTBI.sort()
 
 
-
-
 # Second dim
 N_State_Strata = 2
 RiskLo, RiskHi = 0, 1
 Tag_Strata = ['RiskLo', 'RiskHi']
+
+N_Aux = 2
+IncN = 0
+MorN = 1

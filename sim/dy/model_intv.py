@@ -1,11 +1,10 @@
 import numpy as np
 import pandas as pd
-from sim.intv import Demography, BgACF, VulACF
+from sim.intv import Demography, ProcACF, ProcAltACF
 from sim.dy import Model
 import sim.dy.keys as I
 from sim.intv import Intervention
 from scipy.integrate import solve_ivp
-from scipy.optimize import minimize_scalar
 
 __author__ = 'Chu-Chang Ku'
 __all__ = ['Model']
@@ -16,8 +15,8 @@ class ModelIntv(Model):
         Model.__init__(self, year0)
         self.Parent = Model(year0)
         self.Demography = Demography(I)
-        self.BgACF = BgACF(I)
-        self.VulACF = VulACF(I)
+        self.ACF = ProcACF(I)
+        self.AltACF = ProcAltACF(I)
 
     def __call__(self, t, y, pars, intv=None):
         y = y.reshape((I.N_State_TB, I.N_State_Strata * 2))
@@ -31,11 +30,11 @@ class ModelIntv(Model):
             dy[:, 2:] += self.Progression.calc_dy(t, y[:, 2:], pars)
             dy[:, 2:] += self.Cascade.calc_dy(t, y[:, 2:], pars)
 
-        # Baseline ACF
-        dy += self.BgACF.calc_dy(t, y, pars, intv)
+        # ACF
+        dy += self.ACF.calc_dy(t, y, (pars, intv))
 
         # Vulnerability-led ACF
-        dy += self.VulACF.calc_dy(t, y, pars, intv)
+        dy += self.AltACF.calc_dy(t, y, (pars, intv))
 
         return dy.reshape(-1)
 
@@ -52,8 +51,8 @@ class ModelIntv(Model):
         self.Cascade.measure(t, y_all, pars, mea)
 
         # ACF metrics
-        self.BgACF.measure(t, y, pars, intv, mea)
-        self.VulACF.measure(t, y, pars, intv, mea)
+        self.ACF.measure(t, y, (pars, intv), mea)
+        self.AltACF.measure(t, y, (pars, intv), mea)
         return mea
 
     @staticmethod
@@ -75,13 +74,8 @@ class ModelIntv(Model):
         y0r[:, :2] = y0
 
         # Update triage
-        spec = p['acf_sym_spec'] if 'acf_sym_spec' in p else None
-        self._update_triage(y0, p, spec)
-
-        # Baseline ACF
-        if 'r_acf_mdu' not in p:
-            self._find_r_acf0(y0, p)
-
+        spec = p['acf_sym_spec'] if 'acf_sym_spec' in p else 1 - 0.036
+        self.update_triage(y0, p, spec)
         return y0r, p
 
     @staticmethod
@@ -93,7 +87,7 @@ class ModelIntv(Model):
         p['acf_sym_spec'] = p['acf_sym_spec']
 
     @staticmethod
-    def _update_triage(y0, p, spec_sym=None):
+    def update_triage(y0, p, spec_sym=1 - 0.036):
         sens_cxr, spec_cxr = p['acf_cxr_sens'], p['acf_cxr_spec']
         sens_xpert, spec_xpert = p['acf_xpert_sens'], p['acf_xpert_spec']
 
@@ -116,37 +110,48 @@ class ModelIntv(Model):
         pos_xpert[I.LTBI] = (1 - spec_xpert)
         pos_xpert[I.Infectious] = sens_xpert
 
-        if spec_sym is None:
-            # pos = (y0 * eligible * pos_cxr * pos_xpert)
-            # ppv_mu = pos[I.Infectious].sum() / pos.sum()
-            #
-            # def fn(spec, y):
-            #     pos_sym = np.zeros_like(y)
-            #     pos_sym[I.LTBI + I.Asym] = (1 - spec)
-            #     pos_sym[I.U] = (1 - spec)
-            #     pos_sym[I.Sym + I.ExSym] = 1
-            #
-            #     pos = y * eligible * pos_sym * pos_xpert
-            #     ppv_d2d = pos[I.Infectious].sum() / pos.sum()
-            #
-            #     return (ppv_d2d - ppv_mu) ** 2
-            #
-            # opt = minimize_scalar(fn, 0.99, args=(y0, ), method='bounded', bounds=(0.5, 1))
-            # spec_sym = opt.x
-            p['acf_sym_spec'] = spec_sym = 1 - 0.036
-
         pos_sym = np.zeros((I.N_State_TB, 1))
         pos_sym[I.LTBI + I.Asym] = (1 - spec_sym)
         pos_sym[I.U] = (1 - spec_sym)
         pos_sym[I.Sym + I.ExSym] = 1
 
-        p.update({
-            'eli': eligible,
-            'pos_sym': pos_sym,
-            'pos_vul': pos_vul,
-            'pos_cxr': pos_cxr,
-            'pos_xpert': pos_xpert,
-        })
+        p['alg:Sy'] = {
+            'pos': pos_sym * pos_xpert,
+            'use_sym': 1, 'use_vul': 0, 'use_vs': 0, 'use_cxr': 0,
+            'use_xpert': pos_sym
+        }
+
+        p['alg:SyCx'] = {
+            'pos': (1 - (1 - pos_sym) * (1 - pos_cxr)) * pos_xpert,
+            'use_sym': 1, 'use_vul': 0, 'use_vs': 0, 'use_cxr': 1,
+            'use_xpert': (1 - (1 - pos_sym) * (1 - pos_cxr))
+        }
+
+        pos_sym = pos_sym.reshape(-1)
+        pos_cxr = pos_cxr.reshape(-1)
+
+        pos = np.zeros((I.N_State_TB, 4))
+        pos[:, 0] = pos_sym + (1 - pos_sym) * pos_vul[:, 0] * pos_cxr
+        pos[:, 1] = pos_sym + (1 - pos_sym) * pos_vul[:, 1] * pos_cxr
+        pos[:, 2] = pos_sym + (1 - pos_sym) * pos_cxr
+        pos[:, 3] = pos_sym + (1 - pos_sym) * pos_cxr
+
+        cxr = np.zeros((I.N_State_TB, 4))
+        cxr[:, 0] = (1 - pos_sym) * pos_vul[:, 0]
+        cxr[:, 1] = (1 - pos_sym) * pos_vul[:, 1]
+        cxr[:, 2] = (1 - pos_sym)
+        cxr[:, 3] = (1 - pos_sym)
+
+        p['alg:VSC'] = {
+            'pos': pos * pos_xpert,
+            'use_sym': np.array([0, 0, 1, 1]).reshape((1, -1)),
+            'use_vul': 0,
+            'use_vs': np.array([1, 1, 0, 0]).reshape((1, -1)),
+            'use_cxr': cxr,
+            'use_xpert': pos_sym.reshape((-1, 1))
+        }
+
+        p['eli'] = eligible
 
     def simulate_onward(self, y0, p, intv=None, t_start=2022, t_end=2031.0, dt=0.5):
         t_out = np.linspace(t_start, t_end, int((t_end - t_start) / dt) + 1)
@@ -166,6 +171,9 @@ class ModelIntv(Model):
         return ys, ms, {'succ': True}
 
 
+
+
+
 if __name__ == '__main__':
     import json
     import matplotlib.pylab as plt
@@ -176,21 +184,25 @@ if __name__ == '__main__':
     m0 = ModelIntv()
 
     p0 = prior[2]
-    p0.update({'beta_ds': 25, 'rr_risk_comorb': 20, 'rr_beta_dr': 1.05, 'p_comorb': 0.007})
+    p0.update({'beta_ds': 25, 'rr_risk_comorb': 20, 'rr_beta_dr': 1.05, 'p_comorb': 0.15})
 
     y1, p1 = m0.find_baseline(p0, 2022)
 
-    _, ms0, _ = m0.simulate_onward(y1, p1, intv={'D2D': {'Scale': 0}, 'MDU': {'Scale': 0}})
+    _, ms0, _ = m0.simulate_onward(y1, p1, intv={'FullACF': {'Coverage': 0}})
     # _, ms1, _ = m0.simulate_onward(y1, p1, intv={'D2D': {'Scale': 1}, 'MDU': {'Scale': 1}})
     # _, ms2, _ = m0.simulate_onward(y1, p1, intv={'D2D': {'Scale': 2}, 'MDU': {'Scale': 2}})
-    _, ms1, _ = m0.simulate_onward(y1, p1, intv={'VulACF': {'Coverage': 0.15, 'FollowUp': 0.2, 'Duration': 2}})
-    _, ms2, _ = m0.simulate_onward(y1, p1, intv={'VulACF': {'Coverage': 0.15, 'FollowUp': 1, 'Duration': 2}})
-    # _, ms2, _ = m0.simulate_onward(y1, p1, intv={'PlainACF': {'Coverage': 0.15}})
+    # _, ms1, _ = m0.simulate_onward(y1, p1, intv={'FullACF': {'Coverage': 0.15, 'FollowUp': 3,
+    #                                                          'Duration': 2, 'ScreenAlg': 'VSC'}})
+    # _, ms2, _ = m0.simulate_onward(y1, p1, intv={'FullACF': {'Coverage': 0.15, 'FollowUp': 1,
+    #                                                          'Duration': 2, 'ScreenAlg': 'VSC'}})
 
-    print('MDU', ms1.ACF_MDU_Yield[2022.5] * 1e5, 430 / 3e6 * 1e5)
-    print('D2D', ms1.ACF_D2D_Yield[2022.5] * 1e5, 104.5 / 3e6 * 1e5)
+    _, ms1, _ = m0.simulate_onward(y1, p1, intv={'FullACF': {'Coverage': 0.15, 'ScreenAlg': 'Sy'}})
+    _, ms2, _ = m0.simulate_onward(y1, p1, intv={'AltACF': {'Coverage': 0.15, 'ScreenAlg': 'Sy'}})
 
-    print(ms1[['IncR', 'ACF_Vul_Yield']])
+    # print('MDU', ms1.ACF_MDU_Yield[2022.5] * 1e5, 430 / 3e6 * 1e5)
+    # print('D2D', ms1.ACF_D2D_Yield[2022.5] * 1e5, 104.5 / 3e6 * 1e5)
+
+    print(ms1[['IncR', 'ACF_Yield']])
 
     fig, axes = plt.subplots(3, 2)
 
@@ -217,26 +229,26 @@ if __name__ == '__main__':
     axes[2, 0].legend(['I0', 'I1', 'I2'])
     axes[2, 0].set_title('Mortality')
 
-    ms0.ACF_MDU_Yield.plot(ax=axes[0, 1])
-    ms1.ACF_MDU_Yield.plot(ax=axes[0, 1])
-    ms2.ACF_MDU_Yield.plot(ax=axes[0, 1])
+    ms0.PrOnTPT.plot(ax=axes[0, 1])
+    ms1.PrOnTPT.plot(ax=axes[0, 1])
+    ms2.PrOnTPT.plot(ax=axes[0, 1])
 
     axes[0, 1].legend(['I0', 'I1', 'I2'])
-    axes[0, 1].set_title('Yield, MDU')
+    axes[0, 1].set_title('On Pseudo TPT')
 
-    ms0.ACF_D2D_Yield.plot(ax=axes[1, 1])
-    ms1.ACF_D2D_Yield.plot(ax=axes[1, 1])
-    ms2.ACF_D2D_Yield.plot(ax=axes[1, 1])
+    ms0.ACF_Yield.plot(ax=axes[1, 1])
+    ms1.ACF_Yield.plot(ax=axes[1, 1])
+    ms2.ACF_Yield.plot(ax=axes[1, 1])
 
     axes[1, 1].legend(['I0', 'I1', 'I2'])
-    axes[1, 1].set_title('Yield, D2D')
+    axes[1, 1].set_title('Yield, Vul-led')
 
-    ms0.ACF_Vul_Yield.plot(ax=axes[2, 1])
-    ms1.ACF_Vul_Yield.plot(ax=axes[2, 1])
-    ms2.ACF_Vul_Yield.plot(ax=axes[2, 1])
+    ms0.ACF_fu_Yield.plot(ax=axes[2, 1])
+    ms1.ACF_fu_Yield.plot(ax=axes[2, 1])
+    ms2.ACF_fu_Yield.plot(ax=axes[2, 1])
 
     axes[2, 1].legend(['I0', 'I1', 'I2'])
-    axes[2, 1].set_title('Yield, Vul')
+    axes[2, 1].set_title('Yield, Follow-up')
 
     fig.tight_layout()
 
