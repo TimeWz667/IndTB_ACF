@@ -9,7 +9,7 @@ targets <- bind_rows(targets)
 
 
 
-folders <- c("dy_mul", "dy_add", "dy_ladd", "main")
+folders <- c("main")
 
 
 for(folder in folders) {
@@ -43,12 +43,12 @@ for(folder in folders) {
       labs(subtitle = "Untreated TB, sought care") + theme(legend.position = "none"),
     sims %>% 
       ggplot() +
-      geom_line(aes(x = Time, y = ARTI, group = Key, colour = "Simulation"), alpha = 0.2) +
+      geom_line(aes(x = Time, y = ARTI_Sp, group = Key, colour = "Simulation"), alpha = 0.2) +
       expand_limits(y = 0) +
       geom_pointrange(data = targets %>% filter(Index == "ARTI"), 
                       aes(x = 2020, y = M, ymin = L, ymax = U)) + 
       scale_y_continuous("Percentage", labels=scales::percent) +
-      labs(subtitle = "ARTI") + theme(legend.position = "none"),
+      labs(subtitle = "Annual risk of TB infection") + theme(legend.position = "none"),
     sims %>% 
       ggplot() +
       geom_line(aes(x = Time, y = PrDR_CNR, group = Key, colour = "Simulation"), alpha = 0.2) +
@@ -60,11 +60,11 @@ for(folder in folders) {
   )
   
   
-  g_all <- ggarrange(plotlist = gs, ncol=3, nrow=2)
+  g_all <- ggarrange(gs[[1]], gs[[4]], gs[[2]], gs[[5]], gs[[3]], NULL, ncol=2, nrow=3)
   
-  ggsave(g_all, filename = here::here("out", folder, "g_tofit.pdf"), width = 8, height = 5)
+  ggsave(g_all, filename = here::here("out", folder, "g_tofit.png"), width = 6, height = 7)
 }
 
 
-
+ggarrange(gs[[1]], gs[[4]], gs[[2]], gs[[5]], gs[[3]], NULL, ncol=2, nrow=3)
 
