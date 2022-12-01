@@ -63,9 +63,10 @@ class ModelIntv(Model):
     dfe.terminal = True
     dfe.direction = -1
 
-    def find_baseline(self, p, t_start=2022):
+    def find_baseline(self, p, t_start=2022, pop0=3e6):
         y0, _, _ = self.Parent.simulate_to_baseline(p, t_start)
         y0, p = self._bridge_y0(y0, p)
+        y0 = pop0 * y0 / y0.sum()
         return y0, p
 
     def _bridge_y0(self, y0, p):
@@ -148,12 +149,12 @@ class ModelIntv(Model):
             'use_vul': 0,
             'use_vs': np.array([1, 1, 0, 0]).reshape((1, -1)),
             'use_cxr': cxr,
-            'use_xpert': pos_sym.reshape((-1, 1))
+            'use_xpert': pos
         }
 
         p['eli'] = eligible
 
-    def simulate_onward(self, y0, p, intv=None, t_start=2022, t_end=2031.0, dt=0.5):
+    def simulate_onward(self, y0, p, intv=None, t_start=2022, t_end=2031.0, dt=0.5, polished=False):
         t_out = np.linspace(t_start, t_end, int((t_end - t_start) / dt) + 1)
         if intv is not None:
             intv = Intervention.parse_obj(intv)
@@ -168,10 +169,37 @@ class ModelIntv(Model):
 
         ms = [self.measure(t, ys.sol(t), p, intv) for t in t_out if t >= t_start]
         ms = pd.DataFrame(ms).set_index('Time')
+        if polished:
+            ms = self._polish_ms(ms)
         return ys, ms, {'succ': True}
 
+    @staticmethod
+    def _polish_ms(ms):
+        ss = list()
 
+        idx = ['IncR', 'MorR'] + [k for k in ms.columns if k.startswith('ACF_')]
+        ts = [t for t in list(ms.index)[:-1] if t == round(t)]
+        for t0 in ts:
+            t0, t1, t2 = t0, t0 + 0.5, t0 + 1
+            p0, p1, p2 = ms.Pop[t0], ms.Pop[t1], ms.Pop[t2]
 
+            temp = {'Year': t0, 'Pop': p1}
+
+            for k in idx:
+                v0, v1, v2 = ms[k][t0] * p0, ms[k][t1] * p1, ms[k][t2] * p2
+                v = (v0 + v1 + v1 + v2) * 0.5 / 2
+                temp[k] = v / p1
+
+            ss.append(temp)
+
+        ss = pd.DataFrame(ss).set_index('Year')
+
+        summary = {
+            'Inc': (ss.IncR * ss.Pop).sum(),
+            'Mor': (ss.MorR * ss.Pop).sum()
+        }
+        summary.update({k: (ss[k] * ss.Pop).sum() for k in ss.columns if k.startswith('ACF')})
+        return ss, summary
 
 
 if __name__ == '__main__':
@@ -191,13 +219,13 @@ if __name__ == '__main__':
     _, ms0, _ = m0.simulate_onward(y1, p1, intv={'FullACF': {'Coverage': 0}})
     # _, ms1, _ = m0.simulate_onward(y1, p1, intv={'D2D': {'Scale': 1}, 'MDU': {'Scale': 1}})
     # _, ms2, _ = m0.simulate_onward(y1, p1, intv={'D2D': {'Scale': 2}, 'MDU': {'Scale': 2}})
-    # _, ms1, _ = m0.simulate_onward(y1, p1, intv={'FullACF': {'Coverage': 0.15, 'FollowUp': 3,
-    #                                                          'Duration': 2, 'ScreenAlg': 'VSC'}})
-    # _, ms2, _ = m0.simulate_onward(y1, p1, intv={'FullACF': {'Coverage': 0.15, 'FollowUp': 1,
-    #                                                          'Duration': 2, 'ScreenAlg': 'VSC'}})
+    _, ms1, _ = m0.simulate_onward(y1, p1, intv={'FullACF': {'Coverage': 0.15, 'FollowUp': 7,
+                                                             'Duration': 2, 'ScreenAlg': 'VSC'}})
+    _, ms2, _ = m0.simulate_onward(y1, p1, intv={'FullACF': {'Coverage': 0.15, 'FollowUp': 1,
+                                                             'Duration': 2, 'ScreenAlg': 'VSC'}})
 
-    _, ms1, _ = m0.simulate_onward(y1, p1, intv={'FullACF': {'Coverage': 0.15, 'ScreenAlg': 'Sy'}})
-    _, ms2, _ = m0.simulate_onward(y1, p1, intv={'AltACF': {'Coverage': 0.15, 'ScreenAlg': 'Sy'}})
+    # _, ms1, _ = m0.simulate_onward(y1, p1, intv={'FullACF': {'Coverage': 0.15, 'ScreenAlg': 'Sy'}})
+    # _, ms2, _ = m0.simulate_onward(y1, p1, intv={'AltACF': {'Coverage': 0.15, 'ScreenAlg': 'Sy'}})
 
     # print('MDU', ms1.ACF_MDU_Yield[2022.5] * 1e5, 430 / 3e6 * 1e5)
     # print('D2D', ms1.ACF_D2D_Yield[2022.5] * 1e5, 104.5 / 3e6 * 1e5)

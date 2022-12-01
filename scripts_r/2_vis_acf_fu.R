@@ -4,40 +4,31 @@ library(ggpubr)
 theme_set(theme_bw() + theme(text = element_text(family = "sans")))
 
 
-pop.size <- 3e6
-
 
 stats <- local({
   cost <- read_csv(here::here("data", "cost.csv"))
   cost <- as.list(setNames(cost$Vul, cost$Item))
   
-  stats <- read_csv(here::here("out", "dy_hi", "Sim_VulACF_fudur_stats.csv"))[-1] %>% 
+  stats <- read_csv(here::here("out", "main", "Sim_VulFu_fudur_0.10_stats.csv"))[-1] %>% 
     mutate(
-      N_Screened = ACF_Vul_Screened,
-      N_Confirmed = ACF_Vul_Confirmed,
-      N_Fl_DS = ACF_Vul_DS_Fl,
-      N_Fl_DR = ACF_Vul_DR_Fl,
-      N_Sl_DR = ACF_Vul_DR_Sl,
-      N_TPT = ACF_Vul_Yield - N_Fl_DS - N_Fl_DR - N_Sl_DR,
-      C_Screened = ACF_Vul_Vul * cost$Vul + ACF_Vul_Sym * cost$Sym + ACF_Vul_CXR * cost$CXR,
-      C_Confirmed = ACF_Vul_Xpert * cost$Xpert,
-      C_Tx = (N_Fl_DS + N_Fl_DR + N_TPT) * cost$Tx_Fl + (N_Fl_DR + N_Sl_DR) * cost$Tx_Sl,
+      across(starts_with("ACF_"), function(x) ifelse(is.na(x), 0, x)),
+      N_Vul = ACF_Uti_vul,
+      N_Sym = ACF_Uti_sym,
+      N_VulSym = ACF_Uti_vs,
+      N_CXR = ACF_Uti_cxr,
+      N_Xpert = ACF_Uti_xpert,
+      N_Fl = ACF_Fl,
+      N_Sl = ACF_Sl,
+      N_TPT = ACF_TPT,
+      C_Screened = N_Sym * cost$Sym + N_Vul * cost$Vul + N_VulSym * cost$VSC + N_CXR * cost$CXR,
+      C_Confirmed = N_Xpert * cost$Xpert,
+      C_Tx = (N_Fl + N_TPT) * cost$Tx_Fl + N_Sl * cost$Tx_Sl,
       C_Total = C_Screened + C_Confirmed + C_Tx,
-      N_Screened = ACF_VulFu_Screened,
-      N_Confirmed = ACF_VulFu_Confirmed,
-      N_Fl_DS = ACF_VulFu_DS_Fl,
-      N_Fl_DR = ACF_VulFu_DR_Fl,
-      N_Sl_DR = ACF_VulFu_DR_Sl,
-      N_TPT = ACF_VulFu_Yield - N_Fl_DS - N_Fl_DR - N_Sl_DR,
-      C_ScreenedFu = ACF_VulFu_Sym * cost$Sym + ACF_VulFu_CXR * cost$CXR,
-      C_ConfirmedFu = ACF_VulFu_Xpert * cost$Xpert,
-      C_TxFu = (N_Fl_DS + N_Fl_DR + N_TPT) * cost$Tx_Fl + (N_Fl_DR + N_Sl_DR) * cost$Tx_Sl,
-      C_TotalFu = C_ScreenedFu + C_ConfirmedFu + C_TxFu,
-      PPV_Vul = ifelse(ACF_Vul_Yield > 0, ACF_Vul_TP / ACF_Vul_Yield, 0),
-      PPV_VulFu = ifelse(ACF_VulFu_Yield > 0, ACF_VulFu_TP / ACF_VulFu_Yield, 0),
+      PPV_Ini = ifelse(ACF_Yield > 0, ACF_TP / ACF_Yield, 0),
+      PPV_Fu = ifelse(ACF_fu_Yield > 0, ACF_fu_TP / ACF_fu_Yield, 0),
     ) %>% 
-    select(Key, Scenario, FollowUp, Duration, Coverage, Pop0, Inc1 = IncR, Mor1 = MorR,
-           N_Screened, N_Confirmed, starts_with("C_"), starts_with('PPV'))
+    select(Key, Scenario, FollowUp, Duration, Coverage, Inc1 = Inc, Mor1 = Mor,
+           starts_with("C_"), starts_with('PPV'))
   
   
   stats <- stats %>% 
@@ -45,22 +36,22 @@ stats <- local({
     left_join(stats %>% 
                 filter(Scenario == "Baseline") %>%
                 mutate(
-                  C0_Total = C_Total + C_TotalFu,
-                  C0_Test = C_Screened + C_Confirmed + C_ScreenedFu + C_ConfirmedFu,
+                  C0_Total = C_Total,
+                  C0_Test = C_Screened + C_Confirmed,
                 ) %>% 
                 select(Key, Inc0 = Inc1, Mor0  = Mor1, C0_Total, C0_Test)) %>% 
     mutate(
-      C1_Total = C_Total + C_TotalFu,
-      C1_Test = C_Screened + C_Confirmed + C_ScreenedFu + C_ConfirmedFu,
+      C1_Total = C_Total,
+      C1_Test = C_Screened + C_Confirmed,
       dE = Inc0 - Inc1,
       AvtInc = dE / Inc0,
       dC_Total = C1_Total - C0_Total,
       dC_Test = C1_Test - C0_Test,
       CER_Total = dC_Total / dE,
       CER_Test = dC_Test / dE,
-      dC_Total = dC_Total / Pop0 * pop.size,
-      dC_Test = dC_Test / Pop0 * pop.size,
-      across(starts_with("C_"), function(x) x / Pop0 * pop.size)
+      dC_Total = dC_Total,
+      dC_Test = dC_Test,
+      across(starts_with("C_"), function(x) x)
     )
   
   stats %>% 
@@ -72,7 +63,7 @@ stats <- local({
     ))) %>% 
     ungroup() %>% 
     mutate(
-      n_fu = ifelse(FollowUp == 0, 0, 1 / FollowUp)
+      n_fu = FollowUp
     )
 }) %>% 
   pivot_longer(-c(FollowUp, Duration, n_fu)) %>% 
@@ -213,15 +204,15 @@ g_bind1 <- ggpubr::ggarrange(g_fudur, g_fudur_ce, nrow = 1)
 g_bind2 <- ggpubr::ggarrange(g_fudur, g_fudur_cost, nrow = 1)
 
 
-ggsave(g_fudur, filename = here::here("docs", "g_fudur_inc.png"), width = 7, height = 5)
+ggsave(g_fudur, filename = here::here("docs", "figs", "g_fudur_inc.png"), width = 7, height = 5)
 ggsave(g_fudur_cost + 
          theme(legend.position = c(1, 0), legend.justification = c(1.05, -0.05)), 
-       filename = here::here("docs", "g_fudur_cost.png"), width = 7, height = 5)
+       filename = here::here("docs", "figs", "g_fudur_cost.png"), width = 7, height = 5)
 
-ggsave(g_fudur_cpart, filename = here::here("docs", "g_fudur_cpart.png"), width = 9, height = 5)
-ggsave(g_fudur_ppv, filename = here::here("docs", "g_fudur_ppv.png"), width = 7, height = 5)
+ggsave(g_fudur_cpart, filename = here::here("docs", "figs", "g_fudur_cpart.png"), width = 9, height = 5)
+ggsave(g_fudur_ppv, filename = here::here("docs", "figs", "g_fudur_ppv.png"), width = 7, height = 5)
 
 
-ggsave(g_bind1, filename = here::here("docs", "g_fudur1.png"), width = 9, height = 5)
-ggsave(g_bind2, filename = here::here("docs", "g_fudur2.png"), width = 9, height = 5)
+ggsave(g_bind1, filename = here::here("docs", "figs", "g_fudur1.png"), width = 9, height = 5)
+ggsave(g_bind2, filename = here::here("docs", "figs", "g_fudur2.png"), width = 9, height = 5)
 

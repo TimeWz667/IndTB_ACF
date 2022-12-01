@@ -27,7 +27,7 @@ class Intervention(BaseModel):
     def find_rates_main(self, t, p_eli):
         alg = self.FullACF.ScreenAlg
 
-        if t >= self.FullACF.Year0:
+        if t > self.FullACF.Year0:
             r_acf = self.FullACF.Coverage  # / p_eli
             r_acf = min(r_acf, 26)
             if self.FullACF.Duration <= 0:
@@ -44,7 +44,7 @@ class Intervention(BaseModel):
     def find_rates_alt(self, t, p_eli):
         alg = self.AltACF.ScreenAlg
 
-        if t >= self.AltACF.Year0:
+        if t > self.AltACF.Year0:
             r_acf = self.AltACF.Coverage  # / p_eli
             r_acf = min(r_acf, 26)
             return r_acf, alg

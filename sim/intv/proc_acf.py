@@ -64,7 +64,7 @@ class ProcACF(Process):
 
                 calc['fu_arrived'] = arrived = np.array([0, 0, r_fu, r_fu]).reshape((1, 4)) * y
                 calc['fu_eligible'] = eligible = arrived * eli
-                calc['fu_pos'] = eligible * alg['pos']
+                calc['fu_pos'] = pos = eligible * alg['pos']
                 calc['fu_neg'] = eligible * (1 - alg['pos'])
 
                 tp_ds, tp_dr = pos[I.Infectious_DS], pos[I.Infectious_DR]
@@ -148,7 +148,7 @@ class ProcACF(Process):
         mea.update(_mea_acf(n, calc, prefix='fu_'))
 
         for item in ['sym', 'vul', 'vs', 'cxr', 'xpert']:
-            mea[f'ACF_N_{item}'] = calc[f'use_{item}'].sum()
+            mea[f'ACF_Uti_{item}'] = calc[f'use_{item}'].sum() / n
 
         n_tpt = y[self.Keys.UTPT].sum() + y[self.Keys.LTBI_TPT].sum()
         mea['PrOnTPT'] = n_tpt / n
@@ -227,7 +227,7 @@ class ProcAltACF(Process):
     def measure(self, t, y, pars, mea):
         n = y.sum()
         calc = self._calc(t, y, pars)
-        mea.update(_mea_acf(n, calc, 'Alt'))
+        mea.update(_mea_acf(n, calc, 'Alt_'))
 
         for item in ['sym', 'vul', 'vs', 'cxr', 'xpert']:
-            mea[f'AltACF_N_{item}'] = calc[f'use_{item}'].sum()
+            mea[f'AltACF_Uti_{item}'] = calc[f'use_{item}'].sum() / n
