@@ -120,7 +120,7 @@ rocs0 <- bind_rows(
 )
 
 
-g_roc <- ggplot(rocs) +
+g_rocs <- ggplot(rocs) +
   geom_line(aes(x = 1 - Spec, y = Sens, colour = Assumption)) +
   geom_point(data = rocs0, aes(x = 1 - Spec, y = Sens, colour = Assumption)) + 
   geom_abline(slope = 1, linetype = 2) +
@@ -130,8 +130,20 @@ g_roc <- ggplot(rocs) +
                        label = c(add = "Additive", mul = "Multiplicative", ladd = "Less than Additive")) +
   theme(legend.position = c(1, 0), legend.justification = c(1.1, -0.1))
 
+g_rocs
+
+
+g_roc <- ggplot(rocs %>% filter(Assumption == "ladd")) +
+  geom_line(aes(x = 1 - Spec, y = Sens)) +
+  geom_point(data = rocs0 %>% filter(Assumption == "ladd"), aes(x = 1 - Spec, y = Sens)) + 
+  geom_abline(slope = 1, linetype = 2) +
+  scale_x_continuous("1 - Specificity", labels = scales::percent) +
+  scale_y_continuous("Sensitivity", labels = scales::percent) + 
+  theme(legend.position = c(1, 0), legend.justification = c(1.1, -0.1))
+
 g_roc
 
 
-ggsave(g_roc, filename = here::here("docs", "figs", "g_rocs.png"), width = 5, height = 5)  
+ggsave(g_roc, filename = here::here("docs", "figs", "g_roc.png"), width = 5, height = 5)  
+ggsave(g_rocs, filename = here::here("docs", "figs", "g_rocs.png"), width = 5, height = 5)  
 
