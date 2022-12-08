@@ -5,9 +5,9 @@ theme_set(theme_bw() + theme(text = element_text(family = "sans")))
 
 
 labs_display <- c(
-  ut="Symptom + CXR screening",
+  ut="MDU screening",
   utsym="Symptom screening",
-  vul="Vulnerability-led ACF"
+  vul="Vulnerability-led MDU"
 ) 
 
 
@@ -139,7 +139,8 @@ ref <- stats %>%
 
 g_vul_costimp_ref <- g_vul_costimp + 
   geom_point(data = ref, aes(x = C_Total, y = AvtInc, colour = Gp, shape = Coverage)) +
-  scale_shape("Coverage: % Screened per year")
+  scale_shape("Coverage: % Screened per year") +
+  expand_limits(x = c(0, 80e6))
 
 
 g_vul_costimp
@@ -177,7 +178,7 @@ g_vul_costimp_ci <- stats %>%
   scale_y_continuous("Averted cases, %", labels = scales::percent) + 
   scale_color_discrete("Scenario", labels=labs_display) +
   guides(fill = guide_none()) +
-  theme(legend.position = c(0, 1), legend.justification = c(-0.1, 1.1))
+  theme(legend.position = c(1, 0), legend.justification = c(1.05, -0.05), legend.box = "horizontal")
   
   
 g_vul_costimp_ci
