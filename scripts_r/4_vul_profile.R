@@ -1,5 +1,6 @@
 library(tidyverse)
 
+theme_set(theme_bw() + theme(text = element_text(family = "sans")))
 
 
 n_vul <- 5277
