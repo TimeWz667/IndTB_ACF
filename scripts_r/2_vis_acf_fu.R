@@ -9,7 +9,7 @@ stats <- local({
   cost <- read_csv(here::here("data", "cost.csv"))
   cost <- as.list(setNames(cost$Vul, cost$Item))
   
-  stats <- read_csv(here::here("out", "main", "Sim_VulFu_fudur_0.10_stats.csv"))[-1] %>% 
+  stats <- read_csv(here::here("out", "main", "Sim_VulFu_fudur_0.20_stats.csv"))[-1] %>% 
     mutate(
       across(starts_with("ACF_"), function(x) ifelse(is.na(x), 0, x)),
       N_Vul = ACF_Uti_vul,
