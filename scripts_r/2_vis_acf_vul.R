@@ -148,7 +148,7 @@ g_vul_costimp_ref
 c0 <- stats %>% 
   group_by(Alg, Gp) %>% 
   filter(Coverage == max(Coverage)) %>% 
-  summarise(C0 = min(C_Total))
+  summarise(C0 = mean(C_Total))
 
 g_vul_costimp_ci <- stats %>% 
   select(Key, Alg, Gp, Coverage, C_Total, AvtInc) %>% 
@@ -167,10 +167,11 @@ g_vul_costimp_ci <- stats %>%
   ) %>% 
   ungroup() %>% 
   ggplot() + 
-  geom_ribbon(aes(x = C_Total, ymin = L, ymax = U, fill = Gp), alpha = 0.1) +
+  geom_ribbon(aes(x = C_Total, ymin = L, ymax = U, fill = Gp), alpha = 0.1) + 
+  geom_point(data = ref, aes(x = C_Total, y = AvtInc, colour = Gp, shape = Coverage)) +
   geom_line(aes(x = C_Total, y = M, colour = Gp)) +
   scale_x_continuous("Total ACF cost, in millions of 2019 USD", 
-                     breaks=seq(0, 40, 20) * 1e6, 
+                     breaks=c(0, 10, 30, 50) * 1e6, 
                      # limits = c(0, 40e6),
                      labels = scales::number_format(scale = 1e-6)) + 
   scale_y_continuous("Averted cases, %", labels = scales::percent) + 

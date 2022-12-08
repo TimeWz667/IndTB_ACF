@@ -147,7 +147,7 @@ g_fudur_cost <- s1 %>%
   scale_y_continuous("Incident case averted, %, 2023-2030", labels = scales::percent) +
   scale_colour_discrete("Follow-up period", guide = guide_legend(reverse = T), 
                         labels=function(x){paste0(x, ifelse(x=="1", " year", " years"))}) + 
-  expand_limits(y = 0.05, x = 7e6) +
+  expand_limits(y = 0, x = 7e6) +
   theme(legend.position = "None") +
   labs(caption = "*Coverage=20% of total population per year\n*Numbers annotate the number of follow-up screening per year")
 
@@ -191,7 +191,7 @@ g_fudur_ppv <- stats %>%
   scale_y_continuous("PPV of case-yields", labels = scales::percent) +
   scale_x_discrete("Follow-up duration X tests per year") +
   facet_wrap(.~Type) +
-  expand_limits(y = c(0, 0.5)) +
+  expand_limits(y = c(0, 1)) +
   labs(caption = "*Slum population size of 3 million assumed")
 
 
