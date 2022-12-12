@@ -67,8 +67,7 @@ sims %>%
   summarise(across(starts_with("PPV"), mean))
   
 
-
-g_trend <- sims %>% 
+sims_trend <- sims %>% 
   select(Scale, Time, IncR, MorR) %>%  
   pivot_longer(-c(Scale, Time)) %>% 
   group_by(Scale, Time, name) %>% 
@@ -81,7 +80,10 @@ g_trend <- sims %>%
   mutate(
     Scale = factor(Scale, c("Baseline", "1x", "2x", "4x")),
     Time = Time - 0.5
-  ) %>% 
+  )
+
+
+g_trend <- sims_trend %>% 
   ggplot() +
   geom_ribbon(aes(x = Time, ymin = L, ymax = U, fill = Scale), alpha = 0.1) + 
   geom_line(aes(x = Time, y = M, colour = Scale)) + 
@@ -96,6 +98,36 @@ g_trend <- sims %>%
   theme(legend.position = c(0, 0), legend.justification = c(-0.1, -0.1))
 
 g_trend
+
+
+g_inc <- sims_trend %>% 
+  filter(name == "IncR") %>% 
+  ggplot() +
+  geom_ribbon(aes(x = Time, ymin = L, ymax = U, fill = Scale), alpha = 0.1) + 
+  geom_line(aes(x = Time, y = M, colour = Scale)) + 
+  scale_x_continuous("Year", breaks = seq(2022, 2030, 4)) +
+  scale_y_continuous("per 100 000 population", labels = scales::number_format(scale = 1e5)) +
+  scale_color_discrete("", labels = c(Baseline="Baseline", 
+                                      `1x`="Chennai ACF coverage", `2x`="Coverage x2", `4x`="Coverage x4")) +
+  expand_limits(y = 0) +
+  guides(fill = guide_none()) +
+  labs(subtitle = '(A) Annual incidence') +
+  theme(legend.position = 'None')
+
+
+g_mor <- sims_trend %>% 
+  filter(name == "MorR") %>% 
+  ggplot() +
+  geom_ribbon(aes(x = Time, ymin = L, ymax = U, fill = Scale), alpha = 0.1) + 
+  geom_line(aes(x = Time, y = M, colour = Scale)) + 
+  scale_x_continuous("Year", breaks = seq(2022, 2030, 4)) +
+  scale_y_continuous("per 100 000 population", labels = scales::number_format(scale = 1e5)) +
+  scale_color_discrete("", labels = c(Baseline="Baseline", 
+                                      `1x`="Chennai ACF coverage", `2x`="Coverage x2", `4x`="Coverage x4")) +
+  expand_limits(y = 0) +
+  guides(fill = guide_none()) +
+  labs(subtitle = '(B) Annual Mortality') +
+  theme(legend.position = c(0, 0), legend.justification = c(-0.1, -0.1))
 
 
 stats <- sims %>% 
@@ -188,12 +220,17 @@ tab_yield <- ss %>%
   select(Scale, AvtInc, AvtMor, Yield)
 
 
+g_bind <- ggarrange(ggarrange(g_inc, g_mor, nrow=2), 
+                    g_ce + labs(subtitle = "(C)"), nrow=1, ncol=2)
 
-ggsave(g_combine, filename = here::here("docs", "figs", "g_bg_acf_combine.png"), width = 6, height = 4.5)
+
+dggsave(g_combine, filename = here::here("docs", "figs", "g_bg_acf_combine.png"), width = 6, height = 4.5)
 
 ggsave(g_trend, filename = here::here("docs", "figs", "g_bg_acf_trend.png"), width = 8, height = 4.5)
 
 ggsave(g_ce, filename = here::here("docs", "figs", "g_bg_acf_ce.png"), width = 6, height = 4.5)
+
+ggsave(g_bind, filename = here::here("docs", "figs", "g_bg_acf_bind.png"), width = 10, height = 8)
 
 write_csv(tab_yield, here::here("docs", "tabs", "tab_yield_bg_acf.csv"))
 

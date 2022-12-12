@@ -148,8 +148,8 @@ g_fudur_cost <- s1 %>%
   scale_colour_discrete("Follow-up period", guide = guide_legend(reverse = T), 
                         labels=function(x){paste0(x, ifelse(x=="1", " year", " years"))}) + 
   expand_limits(y = 0, x = 7e6) +
-  theme(legend.position = "None") +
-  labs(caption = "*Coverage=20% of total population per year\n*Numbers annotate the number of follow-up screening per year")
+  theme(legend.position = "None") # +
+  # labs(caption = "*Coverage=20% of total population per year\n*Numbers annotate the number of follow-up screening per year")
 
 
 g_fudur_cost
