@@ -9,7 +9,7 @@ targets <- bind_rows(targets)
 
 
 
-folders <- c("main")
+folders <- c("dy_ladd", "dy_add", "dy_mul")
 
 
 for(folder in folders) {
@@ -41,14 +41,14 @@ for(folder in folders) {
                       aes(x = 2020, y = M, ymin = L, ymax = U)) + 
       scale_y_continuous("Percentage", labels=scales::percent) +
       labs(subtitle = "Untreated TB, sought care") + theme(legend.position = "none"),
-    sims %>% 
-      ggplot() +
-      geom_line(aes(x = Time, y = ARTI_Sp, group = Key, colour = "Simulation"), alpha = 0.2) +
-      expand_limits(y = 0) +
-      geom_pointrange(data = targets %>% filter(Index == "ARTI"), 
-                      aes(x = 2020, y = M, ymin = L, ymax = U)) + 
-      scale_y_continuous("Percentage", labels=scales::percent) +
-      labs(subtitle = "Annual risk of TB infection") + theme(legend.position = "none"),
+    # sims %>% 
+    #   ggplot() +
+    #   geom_line(aes(x = Time, y = ARTI, group = Key, colour = "Simulation"), alpha = 0.2) +
+    #   expand_limits(y = 0) +
+    #   geom_pointrange(data = targets %>% filter(Index == "ARTI"), 
+    #                   aes(x = 2020, y = M, ymin = L, ymax = U)) + 
+    #   scale_y_continuous("Percentage", labels=scales::percent) +
+    #   labs(subtitle = "Annual risk of TB infection") + theme(legend.position = "none"),
     sims %>% 
       ggplot() +
       geom_line(aes(x = Time, y = PrDR_CNR, group = Key, colour = "Simulation"), alpha = 0.2) +
@@ -60,11 +60,10 @@ for(folder in folders) {
   )
   
   
-  g_all <- ggarrange(gs[[1]], gs[[4]], gs[[2]], gs[[5]], gs[[3]], NULL, ncol=2, nrow=3)
+  g_all <- ggarrange(gs[[1]], gs[[2]], gs[[4]], gs[[3]], ncol=2, nrow=2)
   
-  ggsave(g_all, filename = here::here("out", folder, "g_tofit.png"), width = 6, height = 7)
+  ggsave(g_all, filename = here::here("out", folder, "g_tofit.png"), width = 6, height = 5)
 }
 
 
-ggarrange(gs[[1]], gs[[4]], gs[[2]], gs[[5]], gs[[3]], NULL, ncol=2, nrow=3)
-
+file.copy(here::here("out", "dy_ladd", "g_tofit.png"), here::here("docs", "figs"), overwrite=TRUE)

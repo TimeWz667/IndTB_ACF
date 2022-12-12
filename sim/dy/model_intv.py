@@ -80,14 +80,6 @@ class ModelIntv(Model):
         return y0r, p
 
     @staticmethod
-    def _find_r_acf0(y0, p, yield_mdu=430 / 3e6, yield_d2d=104.5 / 3e6):
-        pos_sym, pos_cxr, pos_xpert, eligible = p['pos_sym'], p['pos_cxr'], p['pos_xpert'], p['eli']
-
-        p['r_acf_mdu'] = yield_mdu / ((y0 * eligible * (1 - (1 - pos_sym) * (1 - pos_cxr)) * pos_xpert).sum() / y0.sum())
-        p['r_acf_d2d'] = yield_d2d / ((y0 * eligible * pos_sym * pos_xpert).sum() / y0.sum())
-        p['acf_sym_spec'] = p['acf_sym_spec']
-
-    @staticmethod
     def update_triage(y0, p, spec_sym=1 - 0.036):
         sens_cxr, spec_cxr = p['acf_cxr_sens'], p['acf_cxr_spec']
         sens_xpert, spec_xpert = p['acf_xpert_sens'], p['acf_xpert_spec']
@@ -216,6 +208,7 @@ if __name__ == '__main__':
 
     y1, p1 = m0.find_baseline(p0, 2022)
 
+    _, ms0, _ = m0.simulate_onward(y1, p1, intv={'AltACF': {'Coverage': 0.1}})
     _, ms0, _ = m0.simulate_onward(y1, p1, intv={'FullACF': {'Coverage': 0}})
     # _, ms1, _ = m0.simulate_onward(y1, p1, intv={'D2D': {'Scale': 1}, 'MDU': {'Scale': 1}})
     # _, ms2, _ = m0.simulate_onward(y1, p1, intv={'D2D': {'Scale': 2}, 'MDU': {'Scale': 2}})

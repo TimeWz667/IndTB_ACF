@@ -6,11 +6,11 @@ __all__ = ['ProcACF', 'ProcAltACF']
 
 
 def _mea_acf(n, calc, prefix=''):
-    arrived = calc[f'{prefix}arrived'].sum()
-    eligible = calc[f'{prefix}eligible'].sum()
-    pos = calc[f'{prefix}pos'].sum()
+    arrived = calc['arrived'].sum()
+    eligible = calc['eligible'].sum()
+    pos = calc['pos'].sum()
 
-    fl = calc[f'{prefix}tp_ds'].sum() + calc[f'{prefix}tp_dr_fl'].sum()
+    fl = calc['tp_ds'].sum() + calc['tp_dr_fl'].sum()
     sl = calc['fu_tp_dr_sl'].sum()
 
     return {
@@ -230,4 +230,4 @@ class ProcAltACF(Process):
         mea.update(_mea_acf(n, calc, 'Alt_'))
 
         for item in ['sym', 'vul', 'vs', 'cxr', 'xpert']:
-            mea[f'AltACF_Uti_{item}'] = calc[f'use_{item}'].sum() / n
+            mea[f'ACF_Alt_Uti_{item}'] = calc[f'use_{item}'].sum() / n
