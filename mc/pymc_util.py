@@ -53,7 +53,7 @@ class DataModel:
             r_relapse_tc = pm.Triangular('r_relapse_tc', lower=0.024, c=0.032, upper=0.04)
             r_relapse_st = pm.Triangular('r_relapse_st', lower=0.0011, c=0.0019, upper=0.002)
 
-            r_onset = pm.Uniform('r_onset', lower=1, upper=6)
+            r_onset = pm.Uniform('r_onset', lower=1, upper=3)
 
             r_clear = pm.Uniform('r_clear', 0.02, 0.04)
 
