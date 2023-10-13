@@ -72,7 +72,7 @@ g_sens_par_inc <- stats %>%
   scale_y_discrete("Parameter", labels = TeX(lab_pars)) +
   scale_fill_discrete("Change in parameter value") +
   expand_limits(x = c(-0.0018, 0.0018)) +
-  theme(legend.position = c(1, 0), legend.just = c(1.05, 0))  
+  theme(legend.position = c(1, 0), legend.just = c(1.05, -0.05))  
 
 
 g_sens_par_mor <- stats %>% 
@@ -92,7 +92,7 @@ g_sens_par_mor <- stats %>%
   scale_y_discrete("Parameter", labels = TeX(lab_pars)) +
   scale_fill_discrete("Change in parameter value") +
   expand_limits(x = c(-0.0025, 0.0025)) +
-  theme(legend.position = c(1, 0), legend.just = c(1.05, 0))  
+  theme(legend.position = c(1, 0), legend.just = c(1.05, -0.05))  
 
 
 g_sens_par_mor
