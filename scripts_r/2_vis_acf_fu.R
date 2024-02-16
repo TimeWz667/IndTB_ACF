@@ -171,7 +171,7 @@ g_fudur_cpart <- stats %>%
     Source = factor(Source, c("Screening", "Confirmation", "Treatment"))
   ) %>%
   ggplot() +
-  geom_histogram(aes(x = Scenario, y = M, fill = Type), stat = "identity") +
+  geom_histogram(aes(x = Scenario, y = M), stat = "identity") +
   scale_y_continuous("ACF cost by type, in millions of 2019 USD", labels = scales::number_format(scale = 1e-6)) +
   scale_x_discrete("Follow-up duration X tests per year") +
   facet_wrap(.~Source, scales="free_y",) +
